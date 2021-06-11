@@ -1,16 +1,16 @@
 ﻿/******************************************************************************************
-*
-* File:        astronode.h
-* Author:      Raphael Valceschini
-* E-mail:      valceschini.r@bluewin.ch
+
+  File:        astronode.h
+  Author:      Raphael Valceschini
+  E-mail:      valceschini.r@bluewin.ch
 ******************************************************************************************/
 /****************************************************************************************
-*
-* Created on: 			01.04.2021
-* Supported Hardware: Arduino MKR 1400
-*
-* Firmware Version 1.1
-* First version
+
+  Created on:       01.04.2021
+  Supported Hardware: Arduino MKR 1400
+
+  Firmware Version 1.1
+  First version
 ****************************************************************************************/
 
 #ifndef _ASTRONODE_h
@@ -26,17 +26,17 @@
 #define DEBUG
 
 #ifdef DEBUG
-  #define DEBUG_PRINT(x)	Serial.print(x)
-  #define DEBUG_PRINTHEX(x) Serial.print (x, HEX)
-  #define DEBUG_PRINTLN(x)	Serial.println(x)
+#define DEBUG_PRINT(x)  Serial.print(x)
+#define DEBUG_PRINTHEX(x) Serial.print (x, HEX)
+#define DEBUG_PRINTLN(x)  Serial.println(x)
 #else
-  #define DEBUG_PRINT(x)
-  #define DEBUG_PRINTLN(x) 
+#define DEBUG_PRINT(x)
+#define DEBUG_PRINTLN(x)
 #endif
 
 //Timeout
-#define TIMEOUT_SERIAL 100	//ms
-#define BOOT_TIME 700		//ms
+#define TIMEOUT_SERIAL 100  //ms
+#define BOOT_TIME 700   //ms
 
 //REQUEST (Asset => Terminal)
 #define CFG_WR 0x05 //Write configuration, and store in non-volatile memory
@@ -73,25 +73,25 @@
 #define SAK_CA 0xC6 //Answer last SAK_CR confirmation
 #define RES_CA 0xD5 //Answer the reset clear request
 #define EVT_RA 0xE5 //Answer indicates which events are currently pending
-#define ERR_RA 0xFF	//Answer a request reporting an error
+#define ERR_RA 0xFF //Answer a request reporting an error
 
 //Error code list
-#define CRC_NOT_VALID 0x0001		//Discrepancy between provided CRC and expected CRC.
-#define LENGTH_NOT_VALID 0x0011		//Message exceeds the maximum length for a frame.
-#define OPCODE_NOT_VALID 0x0121		//Invalid Operation Code used.
-#define FORMAT_NOT_VALID 0x0601		//At least one of the fields (SSID, password, token) is not composed of exclusively printable standard ASCII characters (0x20 to 0x7E).
+#define CRC_NOT_VALID 0x0001    //Discrepancy between provided CRC and expected CRC.
+#define LENGTH_NOT_VALID 0x0011   //Message exceeds the maximum length for a frame.
+#define OPCODE_NOT_VALID 0x0121   //Invalid Operation Code used.
+#define FORMAT_NOT_VALID 0x0601   //At least one of the fields (SSID, password, token) is not composed of exclusively printable standard ASCII characters (0x20 to 0x7E).
 #define FLASH_WRITING_FAILED 0x0611 //Failed to write the Wi-Fi settings (SSID, password, token) to the flash
-#define BUFFER_FULL 0x2501			//Failed to queue the payload because the sending queue is already full
-#define DUPLICATE_ID 0x2511			//Failed to queue the payload because the Payload ID provided by the asset is already in use in the terminal queue.
-#define BUFFER_EMPTY 0x2601			//Failed to dequeue a payload from the buffer because the buffer is empty
-#define INVALID_POS 0x3501			//Failed to update the geolocation information. Latitude and longitude fields must in the range [-90,90] degrees and [-180,180] degrees, respectively.
-#define NO_ACK 0x4501				//No satellite acknowledgement available for any payload.
-#define NO_CLEAR 0x4601				//No payload ack to clear, or it was already cleared.
+#define BUFFER_FULL 0x2501      //Failed to queue the payload because the sending queue is already full
+#define DUPLICATE_ID 0x2511     //Failed to queue the payload because the Payload ID provided by the asset is already in use in the terminal queue.
+#define BUFFER_EMPTY 0x2601     //Failed to dequeue a payload from the buffer because the buffer is empty
+#define INVALID_POS 0x3501      //Failed to update the geolocation information. Latitude and longitude fields must in the range [-90,90] degrees and [-180,180] degrees, respectively.
+#define NO_ACK 0x4501       //No satellite acknowledgement available for any payload.
+#define NO_CLEAR 0x4601       //No payload ack to clear, or it was already cleared.
 
 //Events
-#define EVENT_SAK 0xF1	 //Satellite Acknowledgement (SAK) Available
+#define EVENT_SAK 0xF1   //Satellite Acknowledgement (SAK) Available
 #define EVENT_RESET 0xF2 //Terminal has reset
-#define EVENT_NO_EVENT	0x00
+#define EVENT_NO_EVENT  0x00
 
 //Escape characters
 #define STX 0x02
@@ -106,85 +106,85 @@
 #define TYPE_WIFI_DEVKIT 4
 
 //Functions return codes
-#define ERROR	0
-#define SUCCESS	1
+#define ERROR 0
+#define SUCCESS 1
 
 
 class ASTRONODE
 {
 
-private:
+  private:
 
-	//Global variables
-	Stream *_serialPort;
-	
-	uint8_t answer_from_astronode[RESPONSE_MAX_SIZE];		  //this will contain the response from the dev kit
-	uint8_t answer_from_astronode_hex[2 * RESPONSE_MAX_SIZE]; //this will contain the response from the dev kit
-	uint8_t command_to_astronode[COMMAND_MAX_SIZE];			  //max size is payload size = 160 + START + ID + Length (2B) + CRC (2B).
-	uint8_t command_to_astronode_hex[2 * COMMAND_MAX_SIZE];	  //max size is payload size = 160 + START + ID + Length (2B) + CRC (2B).
+    //Global variables
+    Stream *_serialPort;
 
-	//Functions prototype
-	uint8_t encode_send_request(uint8_t reg, uint8_t *param, uint8_t param_length);
-	uint16_t receive_decode_answer(uint8_t *param, uint8_t param_length);
-	void byte_array_to_hex_array(uint8_t *in, uint8_t length, uint8_t *out);
-	void hex_array_to_byte_array(uint8_t *in, uint8_t length, uint8_t *out);
-	uint8_t nibble_to_hex(uint8_t nibble);
-	uint8_t hex_to_nibble(uint8_t hex);
-	uint16_t crc_compute(uint8_t *data, uint16_t data_length, uint16_t init);
+    uint8_t answer_from_astronode[RESPONSE_MAX_SIZE];     //this will contain the response from the dev kit
+    uint8_t answer_from_astronode_hex[2 * RESPONSE_MAX_SIZE]; //this will contain the response from the dev kit
+    uint8_t command_to_astronode[COMMAND_MAX_SIZE];       //max size is payload size = 160 + START + ID + Length (2B) + CRC (2B).
+    uint8_t command_to_astronode_hex[2 * COMMAND_MAX_SIZE];   //max size is payload size = 160 + START + ID + Length (2B) + CRC (2B).
 
-	void print_array_to_hex(uint8_t data[], size_t length);
-	String print2digits(int number);
-	String time_to_string(uint8_t year, uint8_t month, uint8_t day, uint8_t hours, uint8_t minutes, uint8_t seconds);
+    //Functions prototype
+    uint8_t encode_send_request(uint8_t reg, uint8_t *param, uint8_t param_length);
+    uint16_t receive_decode_answer(uint8_t *param, uint8_t param_length);
+    void byte_array_to_hex_array(uint8_t *in, uint8_t length, uint8_t *out);
+    void hex_array_to_byte_array(uint8_t *in, uint8_t length, uint8_t *out);
+    uint8_t nibble_to_hex(uint8_t nibble);
+    uint8_t hex_to_nibble(uint8_t hex);
+    uint16_t crc_compute(uint8_t *data, uint16_t data_length, uint16_t init);
 
-public:
+    void print_array_to_hex(uint8_t data[], size_t length);
+    String print2digits(int number);
+    String time_to_string(uint8_t year, uint8_t month, uint8_t day, uint8_t hours, uint8_t minutes, uint8_t seconds);
 
-	//Global variables
-	typedef struct
-	{
-		uint8_t product_id;
-		uint8_t hardware_rev;
-		uint8_t firmware_maj_ver;
-		uint8_t firmware_min_ver;
-		uint8_t firmware_rev;
-		bool with_pl_ack;
-		bool with_geoloc;
-		bool with_ephemeris;
-		bool with_deep_sleep_en;
-		bool with_msg_ack_pin_en;
-		bool with_msg_reset_pin_en;
-	} ASTRONODE_CONFIG;
-	ASTRONODE_CONFIG config;
+  public:
 
-	//Functions prototype
-	uint8_t begin(Stream &serialPort);
-	void end();
+    //Global variables
+    typedef struct
+    {
+      uint8_t product_id;
+      uint8_t hardware_rev;
+      uint8_t firmware_maj_ver;
+      uint8_t firmware_min_ver;
+      uint8_t firmware_rev;
+      bool with_pl_ack;
+      bool with_geoloc;
+      bool with_ephemeris;
+      bool with_deep_sleep_en;
+      bool with_msg_ack_pin_en;
+      bool with_msg_reset_pin_en;
+    } ASTRONODE_CONFIG;
+    ASTRONODE_CONFIG config;
 
-	uint8_t configuration_write(bool with_pl_ack,
-								bool with_geoloc,
-								bool with_ephemeris,
-								bool with_deep_sleep,
-								bool with_ack_event_pin_mask,
-								bool with_reset_event_pin_mask);
-	uint8_t wifi_configuration_write(const char *wland_ssid,
-									 const char *wland_key,
-									 const char *auth_token);
-	uint8_t geolocation_write(int32_t lat, int32_t lon);
-	uint8_t factory_reset(void);
-	uint8_t configuration_read(void);
-	uint8_t configuration_save(void);
-	
-	uint8_t guid_read(String *guid);
-	uint8_t serial_number_read(String *sn);	
-	uint8_t rtc_read(uint32_t *time);
-	
-	uint8_t enqueue_payload(uint8_t *data, uint8_t length, uint16_t id);
-	uint8_t dequeue_payload(uint16_t *id);
-	uint8_t clear_free_payloads(void);
-	
-	uint8_t event_read(uint8_t *event_type);
-	uint8_t read_satellite_ack(uint16_t *id);
-	uint8_t clear_satellite_ack(void);
-	uint8_t clear_reset_event(void);
+    //Functions prototype
+    uint8_t begin(Stream &serialPort);
+    void end();
+
+    uint8_t configuration_write(bool with_pl_ack,
+                                bool with_geoloc,
+                                bool with_ephemeris,
+                                bool with_deep_sleep,
+                                bool with_ack_event_pin_mask,
+                                bool with_reset_event_pin_mask);
+    uint8_t wifi_configuration_write(const char *wland_ssid,
+                                     const char *wland_key,
+                                     const char *auth_token);
+    uint8_t geolocation_write(int32_t lat, int32_t lon);
+    uint8_t factory_reset(void);
+    uint8_t configuration_read(void);
+    uint8_t configuration_save(void);
+
+    uint8_t guid_read(String *guid);
+    uint8_t serial_number_read(String *sn);
+    uint8_t rtc_read(uint32_t *time);
+
+    uint8_t enqueue_payload(uint8_t *data, uint8_t length, uint16_t id);
+    uint8_t dequeue_payload(uint16_t *id);
+    uint8_t clear_free_payloads(void);
+
+    uint8_t event_read(uint8_t *event_type);
+    uint8_t read_satellite_ack(uint16_t *id);
+    uint8_t clear_satellite_ack(void);
+    uint8_t clear_reset_event(void);
 };
 
 #endif
