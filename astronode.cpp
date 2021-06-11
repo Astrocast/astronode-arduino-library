@@ -2,20 +2,18 @@
 *
 * File:        astronode.cpp
 * Author:      Raphael Valceschini
-*			   Astrocast SA
+* E-mail:      valceschini.r@bluewin.ch
 ******************************************************************************************/
 /****************************************************************************************
 *
 * Created on: 			01.04.2021
 * Supported Hardware: Arduino MKR 1400
 *
-* Firmware Version 1.0
+* Firmware Version 1.1
 * First version
 ****************************************************************************************/
 
 #include "astronode.h"
-
-#define DEBUG
 
 uint8_t ASTRONODE::begin(Stream &serialPort)
 {
@@ -33,10 +31,7 @@ uint8_t ASTRONODE::begin(Stream &serialPort)
 	//Wait for boot to complete
 	delay(BOOT_TIME);
 
-	//Send dummy command to reset communication (issue with Arduino lines ? no need if hardware reset first)
-	dummy_cmd();
-
-	return 1;
+	return SUCCESS;
 }
 
 void ASTRONODE::end()
@@ -52,57 +47,32 @@ uint8_t ASTRONODE::configuration_write(bool with_pl_ack,
 									   bool with_reset_event_pin_mask)
 {
 	//Set parameters
-	uint8_t param_w[3] = {0x00, 0x00, 0x00};
-	if (with_pl_ack)
-	{
-		param_w[0] |= 1 << 0;
-	}
-	if (with_geoloc)
-	{
-		param_w[0] |= 1 << 1;
-	}
-	if (with_ephemeris)
-	{
-		param_w[0] |= 1 << 2;
-	}
-	if (with_deep_sleep)
-	{
-		param_w[0] |= 1 << 3;
-	}
-	if (with_ack_event_pin_mask)
-	{
-		param_w[2] |= 1 << 0;
-	}
-	if (with_reset_event_pin_mask)
-	{
-		param_w[2] |= 1 << 1;
-	}
+	uint8_t param_w[3];
+	
+	if (with_pl_ack) 				param_w[0] |= 1 << 0;
+	if (with_geoloc) 				param_w[0] |= 1 << 1;
+	if (with_ephemeris) 			param_w[0] |= 1 << 2;
+	if (with_deep_sleep) 			param_w[0] |= 1 << 3;
+	if (with_ack_event_pin_mask) 	param_w[2] |= 1 << 0;
+	if (with_reset_event_pin_mask)	param_w[2] |= 1 << 1;
 
-#ifdef DEBUG
-	Serial.print("Set config: ");
-#endif
+	DEBUG_PRINT("Set config: ");
 
 	//Send request
 	if (encode_send_request(CFG_WR, param_w, sizeof(param_w)))
 	{
 		if (receive_decode_answer(NULL, 0) == CFG_WA)
 		{
+			DEBUG_PRINTLN("SUCCESS");
 
-#ifdef DEBUG
-			Serial.println("SUCCESS");
-#endif
-
-			return 1;
+			return SUCCESS;
 		}
 		else
 		{
-
-#ifdef DEBUG
-			Serial.println("FAILED");
-#endif
+			DEBUG_PRINTLN("FAILED");
 		}
 	}
-	return 0;
+	return ERROR;
 }
 
 uint8_t ASTRONODE::wifi_configuration_write(const char *wland_ssid, const char *wland_key, const char *auth_token)
@@ -110,17 +80,15 @@ uint8_t ASTRONODE::wifi_configuration_write(const char *wland_ssid, const char *
 	//Set parameters
 	uint8_t param_w[194] = {'\0'};
 
-	uint8_t wland_ssid_length = strlen(wland_ssid);
-	uint8_t wland_key_length = strlen(wland_key);
-	uint8_t auth_token_length = strlen(auth_token);
+	uint8_t wland_ssid_length 	= strlen(wland_ssid);
+	uint8_t wland_key_length 	= strlen(wland_key);
+	uint8_t auth_token_length 	= strlen(auth_token);
 
 	memcpy(&param_w[0], wland_ssid, wland_ssid_length);
 	memcpy(&param_w[33], wland_key, wland_key_length);
 	memcpy(&param_w[97], auth_token, auth_token_length);
 
-#ifdef DEBUG
-	Serial.print("Wifi set config: ");
-#endif
+	DEBUG_PRINT("Wifi set config: ");
 
 	//Send request
 	if (encode_send_request(WIF_WR, param_w, sizeof(param_w)))
@@ -129,30 +97,24 @@ uint8_t ASTRONODE::wifi_configuration_write(const char *wland_ssid, const char *
 		{
 		case WIF_WA:
 		{
-#ifdef DEBUG
-			Serial.println("SUCCESS");
-#endif
+			DEBUG_PRINTLN("SUCCESS");
 
-			return 1;
+			return SUCCESS;
 		}
 		break;
 		case FORMAT_NOT_VALID:
 		{
-#ifdef DEBUG
-			Serial.println("FAILED - At least one of the fields (SSID, password, token) is not composed of exclusively printable standard ASCII characters (0x20 to 0x7E).");
-#endif
+			DEBUG_PRINTLN("FAILED - At least one of the fields (SSID, password, token) is not composed of exclusively printable standard ASCII characters (0x20 to 0x7E).");
 		}
 		break;
 		case FLASH_WRITING_FAILED:
 		{
-#ifdef DEBUG
-			Serial.println("FAILED - Failed to write the Wi-Fi settings (SSID, password, token) to the flash.");
-#endif
+			DEBUG_PRINTLN("FAILED - Failed to write the Wi-Fi settings (SSID, password, token) to the flash.");
 		}
 		break;
 		}
 	}
-	return 0;
+	return ERROR;
 }
 
 uint8_t ASTRONODE::configuration_read(void)
@@ -165,68 +127,64 @@ uint8_t ASTRONODE::configuration_read(void)
 	{
 		if (receive_decode_answer(param_a, sizeof(param_a)) == CFG_RA)
 		{
-			config.product_id = param_a[0];
-			config.hardware_rev = param_a[1];
-			config.firmware_maj_ver = param_a[2];
-			config.firmware_min_ver = param_a[3];
-			config.firmware_rev = param_a[4];
-			config.with_pl_ack = (param_a[5] & (1 << 0));
-			config.with_geoloc = (param_a[5] & (1 << 1));
-			config.with_ephemeris = (param_a[5] & (1 << 2));
-			config.with_deep_sleep_en = (param_a[5] & (1 << 3));
-			config.with_msg_ack_pin_en = (param_a[7] & (1 << 0));
+			config.product_id 			 = param_a[0];
+			config.hardware_rev 		 = param_a[1];
+			config.firmware_maj_ver 	 = param_a[2];
+			config.firmware_min_ver 	 = param_a[3];
+			config.firmware_rev 		 = param_a[4];
+			config.with_pl_ack 			 = (param_a[5] & (1 << 0));
+			config.with_geoloc 			 = (param_a[5] & (1 << 1));
+			config.with_ephemeris		 = (param_a[5] & (1 << 2));
+			config.with_deep_sleep_en 	 = (param_a[5] & (1 << 3));
+			config.with_msg_ack_pin_en 	 = (param_a[7] & (1 << 0));
 			config.with_msg_reset_pin_en = (param_a[7] & (1 << 1));
 
-#ifdef DEBUG
-			Serial.println("terminal configuration: ");
-			Serial.print("    product_id: ");
+			DEBUG_PRINTLN("terminal configuration: ");
+			DEBUG_PRINT("    product_id: ");
 			if (config.product_id == TYPE_ASTRONODE_S)
 			{
-				Serial.println("Commercial Satellite Astronode");
+				DEBUG_PRINTLN("Commercial Satellite Astronode");
 			}
 			else if (config.product_id == TYPE_WIFI_DEVKIT)
 			{
-				Serial.println("Commercial Wi-Fi Dev Kit");
+				DEBUG_PRINTLN("Commercial Wi-Fi Dev Kit");
 			}
-			Serial.print("    hardware revision: ");
-			Serial.println(config.hardware_rev);
-			Serial.print("    firmware version: ");
-			Serial.print(config.firmware_maj_ver);
-			Serial.print(".");
-			Serial.print(config.firmware_min_ver);
-			Serial.print(".");
-			Serial.println(config.firmware_rev);
-			Serial.print("    with payload ack (1=yes,0=no): ");
-			Serial.println(config.with_pl_ack);
-			Serial.print("    with geolocation (1=yes,0=no): ");
-			Serial.println(config.with_geoloc);
-			Serial.print("    with ephemeris (1=yes,0=no): ");
-			Serial.println(config.with_ephemeris);
-			Serial.print("    with deep sleep mode enable (1=yes,0=no): ");
-			Serial.println(config.with_deep_sleep_en);
-			Serial.print("    with message ack pin enable (1=yes,0=no): ");
-			Serial.println(config.with_msg_ack_pin_en);
-			Serial.print("    with message reset pin enable (1=yes,0=no): ");
-			Serial.println(config.with_msg_reset_pin_en);
-#endif
+			DEBUG_PRINT("    hardware revision: ");
+			DEBUG_PRINTLN(config.hardware_rev);
+			DEBUG_PRINT("    firmware version: ");
+			DEBUG_PRINT(config.firmware_maj_ver);
+			DEBUG_PRINT(".");
+			DEBUG_PRINT(config.firmware_min_ver);
+			DEBUG_PRINT(".");
+			DEBUG_PRINTLN(config.firmware_rev);
+			DEBUG_PRINT("    with payload ack (1=yes,0=no): ");
+			DEBUG_PRINTLN(config.with_pl_ack);
+			DEBUG_PRINT("    with geolocation (1=yes,0=no): ");
+			DEBUG_PRINTLN(config.with_geoloc);
+			DEBUG_PRINT("    with ephemeris (1=yes,0=no): ");
+			DEBUG_PRINTLN(config.with_ephemeris);
+			DEBUG_PRINT("    with deep sleep mode enable (1=yes,0=no): ");
+			DEBUG_PRINTLN(config.with_deep_sleep_en);
+			DEBUG_PRINT("    with message ack pin enable (1=yes,0=no): ");
+			DEBUG_PRINTLN(config.with_msg_ack_pin_en);
+			DEBUG_PRINT("    with message reset pin enable (1=yes,0=no): ");
+			DEBUG_PRINTLN(config.with_msg_reset_pin_en);
 
-			return 1;
+			return SUCCESS;
 		}
 	}
-	return 0;
+	return ERROR;
 }
 
 uint8_t ASTRONODE::enqueue_payload(uint8_t *data, uint8_t length, uint16_t id)
 {
 	//Set parameters
 	uint8_t param_w[160 + 2];
-	uint8_t param_a[2]; // Really useful ? Redundant info...
+	uint8_t param_a[2];
 
-#ifdef DEBUG
-	Serial.print("Queuing payload with ID #");
-	Serial.print(id);
-	Serial.print(": ");
-#endif
+	DEBUG_PRINT("Queuing payload with ID #");
+	DEBUG_PRINT(id);
+	DEBUG_PRINT(": ");
 
 	param_w[0] = (uint8_t)id;
 	param_w[1] = (uint8_t)(id >> 8);
@@ -244,44 +202,34 @@ uint8_t ASTRONODE::enqueue_payload(uint8_t *data, uint8_t length, uint16_t id)
 
 			if (id == id_check)
 			{
-#ifdef DEBUG
-				Serial.println("SUCCESS");
-#endif
+				DEBUG_PRINTLN("SUCCESS");
 
-				return 1;
+				return SUCCESS;
 			}
 			else
 			{
-#ifdef DEBUG
-				Serial.println("FAILED - ID mismatch terminal <-> asset. Please dequeue payload...");
-#endif
+				DEBUG_PRINTLN("FAILED - ID mismatch terminal <-> asset. Please dequeue payload first...");
 			}
 		}
 		break;
 		case DUPLICATE_ID:
 		{
-#ifdef DEBUG
-			Serial.println("FAILED - Failed to queue the payload because the Payload ID provided by the asset is already in use in the terminal queue.");
-#endif
+			DEBUG_PRINTLN("FAILED - Failed to queue the payload because the Payload ID provided by the asset is already in use in the terminal queue.");
 		}
 		break;
 		case LENGTH_NOT_VALID:
 		{
-#ifdef DEBUG
-			Serial.println("FAILED - Message exceeds the maximum length for a frame.");
-#endif
+			DEBUG_PRINTLN("FAILED - Message exceeds the maximum length for a frame.");
 		}
 		break;
 		case BUFFER_FULL:
 		{
-#ifdef DEBUG
-			Serial.println("FAILED - Failed to queue the payload because the sending queue is already full.");
-#endif
+			DEBUG_PRINTLN("FAILED - Failed to queue the payload because the sending queue is already full.");
 		}
 		break;
 		}
 	}
-	return 0;
+	return ERROR;
 }
 
 uint8_t ASTRONODE::dequeue_payload(uint16_t *id)
@@ -289,9 +237,7 @@ uint8_t ASTRONODE::dequeue_payload(uint16_t *id)
 	//Set parameters
 	uint8_t param_a[2];
 
-#ifdef DEBUG
-	Serial.print("Remove oldest payload from queue: ");
-#endif
+	DEBUG_PRINTLN("Remove oldest payload from queue: ");
 
 	//Send request
 	if (encode_send_request(PLD_DR, NULL, 0))
@@ -302,49 +248,41 @@ uint8_t ASTRONODE::dequeue_payload(uint16_t *id)
 		{
 			*id = (((uint16_t)param_a[1]) << 8) + ((uint16_t)param_a[0]);
 
-#ifdef DEBUG
-			Serial.print("SUCCESS - Removed payload with ID #");
-			Serial.print(*id);
-			Serial.print("from terminal's queue");
-#endif
+			DEBUG_PRINT("SUCCESS - Removed payload with ID #");
+			DEBUG_PRINT(*id);
+			DEBUG_PRINT("from terminal's queue");
 
-			return 1;
+			return SUCCESS;
 		}
 		break;
 		case BUFFER_EMPTY:
 		{
-#ifdef DEBUG
-			Serial.println("FAILED - Failed to dequeue a payload from the buffer because the buffer is empty.");
-#endif
+			DEBUG_PRINTLN("FAILED - Failed to dequeue a payload from the buffer because the buffer is empty.");
 		}
 		break;
 		}
 	}
-	return 0;
+	return ERROR;
 }
 
 uint8_t ASTRONODE::clear_free_payloads(void)
 {
 	//Set parameters
+	//None
 
-#ifdef DEBUG
-	Serial.print("Clear/free entire terminal's queue: ");
-#endif
+	DEBUG_PRINT("Clear/free entire terminal's queue: ");
 
 	//Send request
 	if (encode_send_request(PLD_FR, NULL, 0))
 	{
 		if (receive_decode_answer(NULL, 0) == PLD_FA)
 		{
+			DEBUG_PRINTLN("SUCCESS");
 
-#ifdef DEBUG
-			Serial.println("SUCCESS");
-#endif
-
-			return 1;
+			return SUCCESS;
 		}
 	}
-	return 0;
+	return ERROR;
 }
 
 uint8_t ASTRONODE::geolocation_write(int32_t lat, int32_t lon)
@@ -355,9 +293,7 @@ uint8_t ASTRONODE::geolocation_write(int32_t lat, int32_t lon)
 	memcpy(&param_w[0], &lat, sizeof(lat));
 	memcpy(&param_w[4], &lon, sizeof(lon));
 
-#ifdef DEBUG
-	Serial.print("Set geolocation: ");
-#endif
+	DEBUG_PRINT("Set geolocation: ");
 
 	//Send request
 	if (encode_send_request(GEO_WR, param_w, sizeof(param_w)))
@@ -366,23 +302,19 @@ uint8_t ASTRONODE::geolocation_write(int32_t lat, int32_t lon)
 		{
 		case GEO_WA:
 		{
-#ifdef DEBUG
-			Serial.println("SUCCESS");
-#endif
+			DEBUG_PRINTLN("SUCCESS");
 
-			return 1;
+			return SUCCESS;
 		}
 		break;
 		case INVALID_POS:
 		{
-#ifdef DEBUG
-			Serial.println("FAILED - Invalid position");
-#endif
+			DEBUG_PRINTLN("FAILED - Invalid position");
 		}
 		break;
 		}
 	}
-	return 0;
+	return ERROR;
 }
 
 uint8_t ASTRONODE::read_satellite_ack(uint16_t *id)
@@ -390,79 +322,65 @@ uint8_t ASTRONODE::read_satellite_ack(uint16_t *id)
 	//Set parameters
 	uint8_t param_a[2];
 
-#ifdef DEBUG
-	Serial.print("Satellite acknowledge received with ID #: ");
-#endif
+	DEBUG_PRINT("Satellite acknowledge received with ID #: ");
 
 	//Send request
 	if (encode_send_request(SAK_RR, NULL, 0))
 	{
 		if (receive_decode_answer(param_a, sizeof(param_a)) == SAK_RA)
 		{
-
 			*id = (((uint16_t)param_a[1]) << 8) + (uint16_t)(param_a[0]);
 
-#ifdef DEBUG
-			Serial.println(*id);
-#endif
+			DEBUG_PRINTLN(*id);
 
-			return 1;
+			return SUCCESS;
 		}
 		else
 		{
-#ifdef DEBUG
-			Serial.println("FAILED - no message acknowledged");
-#endif
+			DEBUG_PRINTLN("FAILED - no message acknowledged");
 		}
 	}
-	return 0;
+	return ERROR;
 }
 
 uint8_t ASTRONODE::clear_satellite_ack(void)
 {
 	//Set parameters
-
-#ifdef DEBUG
-	Serial.print("Clear sat ACK: ");
-#endif
+	//None
+	
+	DEBUG_PRINT("Clear sat ACK: ");
 
 	//Send request
 	if (encode_send_request(SAK_CR, NULL, 0))
 	{
 		if (receive_decode_answer(NULL, 0) == SAK_CA)
 		{
+			DEBUG_PRINTLN("Satellite acknowledge cleared.");
 
-#ifdef DEBUG
-			Serial.println("Satellite acknowledge cleared.");
-#endif
-
-			return 1;
+			return SUCCESS;
 		}
 	}
-	return 0;
+	return ERROR;
 }
 
 uint8_t ASTRONODE::clear_reset_event(void)
 {
 	//Set parameters
-#ifdef DEBUG
-	Serial.print("Clear RESET event: ");
-#endif
+	//None
+	
+	DEBUG_PRINT("Clear RESET event: ");
 
 	//Send request
 	if (encode_send_request(RES_CR, NULL, 0))
 	{
 		if (receive_decode_answer(NULL, 0) == RES_CA)
 		{
+			DEBUG_PRINTLN("RESET event cleared.");
 
-#ifdef DEBUG
-			Serial.println("RESET event cleared.");
-#endif
-
-			return 1;
+			return SUCCESS;
 		}
 	}
-	return 0;
+	return ERROR;
 }
 
 uint8_t ASTRONODE::event_read(uint8_t *event_type)
@@ -470,9 +388,7 @@ uint8_t ASTRONODE::event_read(uint8_t *event_type)
 	//Set parameters
 	uint8_t param_a;
 
-#ifdef DEBUG
-	Serial.print("Read EVENT: ");
-#endif
+	DEBUG_PRINT("Read EVENT: ");
 
 	//Send request
 	if (encode_send_request(EVT_RR, NULL, 0))
@@ -481,29 +397,26 @@ uint8_t ASTRONODE::event_read(uint8_t *event_type)
 		{
 			if (param_a & (1 << 0))
 			{
-#ifdef DEBUG
-				Serial.println("Satellite Acknowledgment (SAK) Available.");
-#endif
+				DEBUG_PRINTLN("Satellite Acknowledgment (SAK) Available.");
+				
 				*event_type = EVENT_SAK;
 			}
 			else if (param_a & (1 << 1))
 			{
-#ifdef DEBUG
-				Serial.println("Terminal has reset.");
-#endif
+				DEBUG_PRINTLN("Terminal has reset.");
+
 				*event_type = EVENT_RESET;
 			}
 			else
 			{
-#ifdef DEBUG
-        Serial.println("No event");
-#endif
+				DEBUG_PRINTLN("No event");
+		
 				*event_type = EVENT_NO_EVENT;
 			}
-			return 1;
+			return SUCCESS;
 		}
 	}
-	return 0;
+	return ERROR;
 }
 
 uint8_t ASTRONODE::guid_read(String *guid)
@@ -511,9 +424,7 @@ uint8_t ASTRONODE::guid_read(String *guid)
 	//Set parameters
 	uint8_t param_a[36];
 
-#ifdef DEBUG
-	Serial.print("GUID: ");
-#endif
+	DEBUG_PRINT("GUID: ");
 
 	//Send request
 	if (encode_send_request(DGI_RR, NULL, 0))
@@ -525,14 +436,12 @@ uint8_t ASTRONODE::guid_read(String *guid)
 				guid->concat((char)param_a[i]);
 			}
 
-#ifdef DEBUG
-			Serial.println(*guid);
-#endif
+			DEBUG_PRINTLN(*guid);
 
-			return 1;
+			return SUCCESS;
 		}
 	}
-	return 0;
+	return ERROR;
 }
 
 uint8_t ASTRONODE::serial_number_read(String *sn)
@@ -540,9 +449,7 @@ uint8_t ASTRONODE::serial_number_read(String *sn)
 	//Set parameters
 	uint8_t param_a[16];
 
-#ifdef DEBUG
-	Serial.print("Serial number: ");
-#endif
+	DEBUG_PRINT("Serial number: ");
 
 	//Send request
 	if (encode_send_request(DSN_RR, NULL, 0))
@@ -554,14 +461,12 @@ uint8_t ASTRONODE::serial_number_read(String *sn)
 				sn->concat((char)param_a[i]);
 			}
 
-#ifdef DEBUG
-			Serial.println(*sn);
-#endif
+			DEBUG_PRINTLN(*sn);
 
-			return 1;
+			return SUCCESS;
 		}
 	}
-	return 0;
+	return ERROR;
 }
 
 uint8_t ASTRONODE::rtc_read(uint32_t *time)
@@ -569,9 +474,7 @@ uint8_t ASTRONODE::rtc_read(uint32_t *time)
 	//Set parameters
 	uint8_t param_a[4];
 
-#ifdef DEBUG
-	Serial.print("RTC time: ");
-#endif
+	DEBUG_PRINT("RTC time: ");
 
 	//Send request
 	if (encode_send_request(RTC_RR, NULL, 0))
@@ -580,92 +483,66 @@ uint8_t ASTRONODE::rtc_read(uint32_t *time)
 		{
 			uint32_t time_tmp = (((uint32_t)param_a[3]) << 24) + (((uint32_t)param_a[2]) << 16) + (((uint32_t)param_a[1]) << 8) + (uint32_t)(param_a[0]);
 
-			*time = time_tmp + 1514761200; //2018-01-01T00:00:00Z
+			*time = time_tmp + 1514761200; //2018-01-01T00:00:00Z (= Astrocast time)
 
-#ifdef DEBUG
-			Serial.println(*time);
-#endif
-
-			return 1;
+			DEBUG_PRINTLN(*time);
+			
+			return SUCCESS;
 		}
 	}
-	return 0;
+	return ERROR;
 }
 
 uint8_t ASTRONODE::factory_reset(void)
 {
 	//Set parameters
-
-#ifdef DEBUG
-	Serial.print("Save config: ");
-#endif
+	//None
+	
+	DEBUG_PRINT("Save config: ");
 
 	//Send request
 	if (encode_send_request(CFG_FR, NULL, 0))
 	{
 		if (receive_decode_answer(NULL, 0) == CFG_FA)
 		{
+			DEBUG_PRINTLN("SUCCES");
 
-#ifdef DEBUG
-			Serial.println("SUCCES");
-#endif
-
-			return 1;
+			return SUCCESS;
 		}
 		else
 		{
-#ifdef DEBUG
-			Serial.println("FAILED");
-#endif
+			DEBUG_PRINTLN("FAILED");
 		}
 	}
-	return 0;
+	return ERROR;
 }
 
 uint8_t ASTRONODE::configuration_save(void)
 {
 	//Set parameters
-
-#ifdef DEBUG
-	Serial.print("Save config: ");
-#endif
+	//None
+	
+	DEBUG_PRINT("Save config: ");
 
 	//Send request
 	if (encode_send_request(CFG_SR, NULL, 0))
 	{
 		if (receive_decode_answer(NULL, 0) == CFG_SA)
 		{
+			DEBUG_PRINTLN("SUCCES");
 
-#ifdef DEBUG
-			Serial.println("SUCCES");
-#endif
-
-			return 1;
+			return SUCCESS;
 		}
 		else
 		{
-#ifdef DEBUG
-			Serial.println("FAILED");
-#endif
+			DEBUG_PRINTLN("FAILED");
 		}
 	}
-	return 0;
-}
-
-void ASTRONODE::dummy_cmd(void)
-{
-  encode_send_request(0x00, NULL, 0);
-  receive_decode_answer(NULL, 0);
+	return ERROR;
 }
 
 uint8_t ASTRONODE::encode_send_request(uint8_t reg, uint8_t *param, uint8_t param_length)
 {
-	//Flush incoming buffer (TODO: needed ?)
-	while (_serialPort->available())
-	{
-		_serialPort->read();
-	}
-
 	//Copy command in buffer
 	command_to_astronode[0] = reg;
 	memcpy(&command_to_astronode[1], param, param_length);
@@ -675,10 +552,8 @@ uint8_t ASTRONODE::encode_send_request(uint8_t reg, uint8_t *param, uint8_t para
 	memcpy(&command_to_astronode[1 + param_length], &cmd_crc, sizeof(cmd_crc));
 
 	/*
-	#ifdef DEBUG
-	Serial.print("asset -> terminal (+ CRC): ");
-	printData(command_to_astronode, 1 + param_length + 2);
-	#endif
+	DEBUG_PRINT("asset -> terminal (+ CRC): ");
+	print_array_to_hex(command_to_astronode, 1 + param_length + 2);
 	*/
 
 	//Translate to hexadecimal
@@ -688,17 +563,17 @@ uint8_t ASTRONODE::encode_send_request(uint8_t reg, uint8_t *param, uint8_t para
 	command_to_astronode_hex[0] = STX;
 	command_to_astronode_hex[2 * (1 + param_length + 2) + 1] = ETX;
 
-	/*#ifdef DEBUG
-	Serial.print("asset -> terminal (+ CRC + HEX encoding): ");
-	printData(command_to_astronode_hex, 2 * (1 + param_length + 2) + 2);
-	#endif*/
+	/*
+	DEBUG_PRINT("asset -> terminal (+ CRC + HEX encoding): ");
+	print_array_to_hex(command_to_astronode_hex, 2 * (1 + param_length + 2) + 2);
+	*/
 
 	//Write command
 	if (_serialPort->write(command_to_astronode_hex, 2 * (1 + param_length + 2) + 2) == (size_t)(2 * (1 + param_length + 2) + 2))
 	{
-		return 1;
+		return SUCCESS;
 	}
-	return 0;
+	return ERROR;
 }
 
 uint16_t ASTRONODE::receive_decode_answer(uint8_t *param, uint8_t param_length)
@@ -707,21 +582,18 @@ uint16_t ASTRONODE::receive_decode_answer(uint8_t *param, uint8_t param_length)
 	size_t rx_length = _serialPort->readBytesUntil(ETX, answer_from_astronode_hex, 2 * RESPONSE_MAX_SIZE);
 
 	if (rx_length)
-	{ //Only with for escape character
-
-		/*#ifdef DEBUG
-		Serial.print("terminal -> asset (+ CRC + HEX encoding): ");
-		printData(answer_from_astronode_hex, rx_length);
-		#endif*/
+	{
+		/*
+		DEBUG_PRINT("terminal -> asset (+ CRC + HEX encoding): ");
+		print_array_to_hex(answer_from_astronode_hex, rx_length);
+		*/
 
 		//Translate to binary
 		hex_array_to_byte_array(&answer_from_astronode_hex[1], rx_length, answer_from_astronode);
 
 		/*
-		#ifdef DEBUG
-		Serial.print("terminal -> asset (+ CRC): ");
-		printData(answer_from_astronode, rx_length >> 1);
-		#endif
+		DEBUG_PRINT("terminal -> asset (+ CRC): ");
+		print_array_to_hex(answer_from_astronode, rx_length >> 1);
 		*/
 
 		//Verify CRC
@@ -730,16 +602,13 @@ uint16_t ASTRONODE::receive_decode_answer(uint8_t *param, uint8_t param_length)
 
 		if (cmd_crc == cmd_crc_check)
 		{
-
-			if (answer_from_astronode[0] == ERROR)
+			if (answer_from_astronode[0] == ERR_RA)
 			{
-
 				//Return error code from terminal
 				return (((uint16_t)answer_from_astronode[2]) << 8) + (uint16_t)(answer_from_astronode[1]);
 			}
 			else
 			{
-
 				//Extract parameters
 				memcpy(param, &answer_from_astronode[1], param_length);
 
@@ -749,18 +618,14 @@ uint16_t ASTRONODE::receive_decode_answer(uint8_t *param, uint8_t param_length)
 		}
 		else
 		{
-#ifdef DEBUG
-			Serial.println("Failed to check CRC - frame is not valid");
-#endif
+			DEBUG_PRINTLN("Failed to check CRC - frame is not valid");
 		}
 	}
 	else
 	{
-#ifdef DEBUG
-		Serial.println("Failed to receive data from astronode before timeout");
-#endif
+		DEBUG_PRINTLN("Failed to receive data from astronode before timeout");
 	}
-	return 0;
+	return ERROR;
 }
 
 uint16_t ASTRONODE::crc_compute(uint8_t *data, uint16_t data_length, uint16_t init)
@@ -781,7 +646,6 @@ void ASTRONODE::byte_array_to_hex_array(uint8_t *in, uint8_t length, uint8_t *ou
 {
 	for (int i = 0; i < length; i++)
 	{
-
 		uint8_t nibble_h = (in[i] & 0xF0) >> 4;
 		uint8_t nibble_l = in[i] & 0x0F;
 
@@ -794,7 +658,6 @@ void ASTRONODE::hex_array_to_byte_array(uint8_t *in, uint8_t length, uint8_t *ou
 {
 	for (int i = 0; i < length; i += 2)
 	{
-
 		uint8_t nibble_h = hex_to_nibble(in[i]);
 		uint8_t nibble_l = hex_to_nibble(in[i + 1]);
 
@@ -826,19 +689,19 @@ uint8_t ASTRONODE::hex_to_nibble(uint8_t hex)
 	}
 }
 
-void ASTRONODE::printData(uint8_t data[], size_t length)
+void ASTRONODE::print_array_to_hex(uint8_t data[], size_t length)
 {
-	Serial.println("uint8_t message[] = {");
+	DEBUG_PRINTLN("uint8_t message[] = {");
 	for (size_t i = 0; i < length; i++)
 	{
-		Serial.print("0x");
+		DEBUG_PRINT("0x");
 		if ((data[i] >> 4) == 0)
-			Serial.print("0"); // print preceeding high nibble if it's zero
-		Serial.print(data[i], HEX);
+			DEBUG_PRINT("0"); // print preceeding high nibble if it's zero
+		DEBUG_PRINTHEX(data[i]);
 		if (i < (length - 1))
-			Serial.print(", ");
+			DEBUG_PRINT(", ");
 		if ((31 - i) % 16 == 0)
-			Serial.println();
+			DEBUG_PRINTLN();
 	}
-	Serial.println("};\n\r");
+	DEBUG_PRINTLN("};\n\r");
 }

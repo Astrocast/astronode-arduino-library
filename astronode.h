@@ -2,14 +2,14 @@
 *
 * File:        astronode.h
 * Author:      Raphael Valceschini
-*			   Astrocast SA
+* E-mail:      valceschini.r@bluewin.ch
 ******************************************************************************************/
 /****************************************************************************************
 *
 * Created on: 			01.04.2021
 * Supported Hardware: Arduino MKR 1400
 *
-* Firmware Version 1.0
+* Firmware Version 1.1
 * First version
 ****************************************************************************************/
 
@@ -22,15 +22,21 @@
 #include "WProgram.h"
 #endif
 
-class ASTRONODE
-{
+//Debug output
+#define DEBUG
 
-private:
-	Stream *_serialPort;
+#ifdef DEBUG
+  #define DEBUG_PRINT(x)	Serial.print(x)
+  #define DEBUG_PRINTHEX(x) Serial.print (x, HEX)
+  #define DEBUG_PRINTLN(x)	Serial.println(x)
+#else
+  #define DEBUG_PRINT(x)
+  #define DEBUG_PRINTLN(x) 
+#endif
 
-// Timeout
-#define TIMEOUT_SERIAL 100
-#define BOOT_TIME 700
+//Timeout
+#define TIMEOUT_SERIAL 100	//ms
+#define BOOT_TIME 700		//ms
 
 //REQUEST (Asset => Terminal)
 #define CFG_WR 0x05 //Write configuration, and store in non-volatile memory
@@ -67,7 +73,7 @@ private:
 #define SAK_CA 0xC6 //Answer last SAK_CR confirmation
 #define RES_CA 0xD5 //Answer the reset clear request
 #define EVT_RA 0xE5 //Answer indicates which events are currently pending
-#define ERROR 0xFF	//Answer a request reporting an error
+#define ERR_RA 0xFF	//Answer a request reporting an error
 
 //Error code list
 #define CRC_NOT_VALID 0x0001		//Discrepancy between provided CRC and expected CRC.
@@ -99,7 +105,19 @@ private:
 #define TYPE_ASTRONODE_S 3
 #define TYPE_WIFI_DEVKIT 4
 
+//Functions return codes
+#define ERROR	0
+#define SUCCESS	1
+
+
+class ASTRONODE
+{
+
+private:
+
 	//Global variables
+	Stream *_serialPort;
+	
 	uint8_t answer_from_astronode[RESPONSE_MAX_SIZE];		  //this will contain the response from the dev kit
 	uint8_t answer_from_astronode_hex[2 * RESPONSE_MAX_SIZE]; //this will contain the response from the dev kit
 	uint8_t command_to_astronode[COMMAND_MAX_SIZE];			  //max size is payload size = 160 + START + ID + Length (2B) + CRC (2B).
@@ -114,9 +132,12 @@ private:
 	uint8_t hex_to_nibble(uint8_t hex);
 	uint16_t crc_compute(uint8_t *data, uint16_t data_length, uint16_t init);
 
-	void printData(uint8_t data[], size_t length);
+	void print_array_to_hex(uint8_t data[], size_t length);
+	String print2digits(int number);
+	String time_to_string(uint8_t year, uint8_t month, uint8_t day, uint8_t hours, uint8_t minutes, uint8_t seconds);
 
 public:
+
 	//Global variables
 	typedef struct
 	{
@@ -147,21 +168,23 @@ public:
 	uint8_t wifi_configuration_write(const char *wland_ssid,
 									 const char *wland_key,
 									 const char *auth_token);
+	uint8_t geolocation_write(int32_t lat, int32_t lon);
+	uint8_t factory_reset(void);
 	uint8_t configuration_read(void);
+	uint8_t configuration_save(void);
+	
+	uint8_t guid_read(String *guid);
+	uint8_t serial_number_read(String *sn);	
+	uint8_t rtc_read(uint32_t *time);
+	
 	uint8_t enqueue_payload(uint8_t *data, uint8_t length, uint16_t id);
 	uint8_t dequeue_payload(uint16_t *id);
 	uint8_t clear_free_payloads(void);
-	uint8_t geolocation_write(int32_t lat, int32_t lon);
+	
+	uint8_t event_read(uint8_t *event_type);
 	uint8_t read_satellite_ack(uint16_t *id);
 	uint8_t clear_satellite_ack(void);
 	uint8_t clear_reset_event(void);
-	uint8_t event_read(uint8_t *event_type);
-	uint8_t guid_read(String *guid);
-	uint8_t serial_number_read(String *sn);
-	uint8_t rtc_read(uint32_t *time);
-	uint8_t factory_reset(void);
-	uint8_t configuration_save(void);
-	void dummy_cmd(void);
 };
 
 #endif
