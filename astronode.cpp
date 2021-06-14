@@ -579,13 +579,15 @@ uint8_t ASTRONODE::encode_send_request(uint8_t reg, uint8_t *param, uint8_t para
 uint16_t ASTRONODE::receive_decode_answer(uint8_t *param, uint8_t param_length)
 {
   //Read answer
-  size_t rx_length = _serialPort->readBytesUntil(ETX, answer_from_astronode_hex, 2 * RESPONSE_MAX_SIZE);
+  _serialPort->readBytesUntil(STX, answer_from_astronode_hex, 2 * RESPONSE_MAX_SIZE); //Only start reading from STX character (careful, also consume STX)
+  answer_from_astronode_hex[0] = 0x02;
+  size_t rx_length = _serialPort->readBytesUntil(ETX, &answer_from_astronode_hex[1], 2 * RESPONSE_MAX_SIZE);
 
   if (rx_length)
   {
     /*
-      DEBUG_PRINT("terminal -> asset (+ CRC + HEX encoding): ");
-      print_array_to_hex(answer_from_astronode_hex, rx_length);
+    DEBUG_PRINT("terminal -> asset (+ CRC + HEX encoding): ");
+    print_array_to_hex(answer_from_astronode_hex, rx_length);
     */
 
     //Translate to binary
