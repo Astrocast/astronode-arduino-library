@@ -580,7 +580,7 @@ uint16_t ASTRONODE::receive_decode_answer(uint8_t *param, uint8_t param_length)
 {
   //Read answer
   _serialPort->readBytesUntil(STX, answer_from_astronode_hex, 2 * RESPONSE_MAX_SIZE); //Only start reading from STX character (careful, also consume STX)
-  answer_from_astronode_hex[0] = 0x02;
+  answer_from_astronode_hex[0] = STX;
   size_t rx_length = _serialPort->readBytesUntil(ETX, &answer_from_astronode_hex[1], 2 * RESPONSE_MAX_SIZE);
 
   if (rx_length)
