@@ -124,7 +124,7 @@ class ASTRONODE
     uint8_t command_to_astronode_hex[2 * COMMAND_MAX_SIZE];   //max size is payload size = 160 + START + ID + Length (2B) + CRC (2B).
 
     //Functions prototype
-    uint8_t encode_send_request(uint8_t reg, uint8_t *param, uint8_t param_length);
+    uint8_t encode_send_request(uint8_t reg_req, uint8_t *param, uint8_t param_length);
     uint16_t receive_decode_answer(uint8_t *param, uint8_t param_length);
     void byte_array_to_hex_array(uint8_t *in, uint8_t length, uint8_t *out);
     void hex_array_to_byte_array(uint8_t *in, uint8_t length, uint8_t *out);
@@ -135,6 +135,8 @@ class ASTRONODE
     void print_array_to_hex(uint8_t data[], size_t length);
     String print2digits(int number);
     String time_to_string(uint8_t year, uint8_t month, uint8_t day, uint8_t hours, uint8_t minutes, uint8_t seconds);
+
+    void dummy_cmd(void);
 
   public:
 

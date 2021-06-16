@@ -31,6 +31,11 @@ uint8_t ASTRONODE::begin(Stream &serialPort)
   //Wait for boot to complete
   delay(BOOT_TIME);
 
+  #if defined(__SAMD21G18A__)
+  DEBUG_PRINTLN("Send dummy command to reset communication (issue with Arduino MKR ?)");
+  dummy_cmd();
+  #endif
+  
   return SUCCESS;
 }
 
@@ -541,35 +546,48 @@ uint8_t ASTRONODE::configuration_save(void)
   return ERROR;
 }
 
-uint8_t ASTRONODE::encode_send_request(uint8_t reg, uint8_t *param, uint8_t param_length)
+void ASTRONODE::dummy_cmd(void)
 {
+  encode_send_request(0x00, NULL, 0);
+  receive_decode_answer(NULL, 0);
+}
+
+uint8_t ASTRONODE::encode_send_request(uint8_t reg_req, uint8_t *param, uint8_t param_length)
+{
+  uint16_t index_buf_cmd = 0, index_buf_cmd_hex = 0;
+
   //Copy command in buffer
-  command_to_astronode[0] = reg;
-  memcpy(&command_to_astronode[1], param, param_length);
+  command_to_astronode[index_buf_cmd++] = reg_req;
+  memcpy(&command_to_astronode[index_buf_cmd], param, param_length);
+  index_buf_cmd += param_length;
 
   //Compute CRC
-  uint16_t cmd_crc = crc_compute(command_to_astronode, param_length + 1, 0xFFFF);
-  memcpy(&command_to_astronode[1 + param_length], &cmd_crc, sizeof(cmd_crc));
+  uint16_t cmd_crc = crc_compute(command_to_astronode, index_buf_cmd, 0xFFFF);
+  memcpy(&command_to_astronode[index_buf_cmd], &cmd_crc, sizeof(cmd_crc));
+  index_buf_cmd += sizeof(cmd_crc);
 
   /*
     DEBUG_PRINT("asset -> terminal (+ CRC): ");
-    print_array_to_hex(command_to_astronode, 1 + param_length + 2);
+    print_array_to_hex(command_to_astronode, index_buf_cmd);
   */
 
+  //Add escape characters
+  command_to_astronode_hex[index_buf_cmd_hex++] = STX;
+
   //Translate to hexadecimal
-  byte_array_to_hex_array(command_to_astronode, 1 + param_length + 2, &command_to_astronode_hex[1]);
+  byte_array_to_hex_array(command_to_astronode, index_buf_cmd, &command_to_astronode_hex[index_buf_cmd_hex]);
+  index_buf_cmd_hex += index_buf_cmd << 1; //Double size of data field with conversion
 
   //Add escape characters
-  command_to_astronode_hex[0] = STX;
-  command_to_astronode_hex[2 * (1 + param_length + 2) + 1] = ETX;
+  command_to_astronode_hex[index_buf_cmd_hex++] = ETX;
 
   /*
     DEBUG_PRINT("asset -> terminal (+ CRC + HEX encoding): ");
-    print_array_to_hex(command_to_astronode_hex, 2 * (1 + param_length + 2) + 2);
+    print_array_to_hex(command_to_astronode_hex, index_buf_cmd_hex);
   */
 
   //Write command
-  if (_serialPort->write(command_to_astronode_hex, 2 * (1 + param_length + 2) + 2) == (size_t)(2 * (1 + param_length + 2) + 2))
+  if (_serialPort->write(command_to_astronode_hex, index_buf_cmd_hex) == (size_t)(index_buf_cmd_hex))
   {
     return SUCCESS;
   }
@@ -579,9 +597,7 @@ uint8_t ASTRONODE::encode_send_request(uint8_t reg, uint8_t *param, uint8_t para
 uint16_t ASTRONODE::receive_decode_answer(uint8_t *param, uint8_t param_length)
 {
   //Read answer
-  _serialPort->readBytesUntil(STX, answer_from_astronode_hex, 2 * RESPONSE_MAX_SIZE); //Only start reading from STX character (careful, also consume STX)
-  answer_from_astronode_hex[0] = STX;
-  size_t rx_length = _serialPort->readBytesUntil(ETX, &answer_from_astronode_hex[1], 2 * RESPONSE_MAX_SIZE);
+  size_t rx_length = _serialPort->readBytesUntil(ETX, answer_from_astronode_hex, 2 * RESPONSE_MAX_SIZE);
 
   if (rx_length)
   {
@@ -591,16 +607,17 @@ uint16_t ASTRONODE::receive_decode_answer(uint8_t *param, uint8_t param_length)
     */
 
     //Translate to binary
-    hex_array_to_byte_array(&answer_from_astronode_hex[1], rx_length, answer_from_astronode);
+    hex_array_to_byte_array(&answer_from_astronode_hex[1], rx_length, answer_from_astronode); // Skip STX, ETX not in buffer
 
     /*
-      DEBUG_PRINT("terminal -> asset (+ CRC): ");
-      print_array_to_hex(answer_from_astronode, rx_length >> 1);
+    DEBUG_PRINT("terminal -> asset (+ CRC): ");
+    print_array_to_hex(answer_from_astronode, rx_length >> 1);
     */
 
     //Verify CRC
-    uint16_t cmd_crc = crc_compute(answer_from_astronode, (rx_length >> 1) - 2, 0xFFFF);
-    uint16_t cmd_crc_check = (((uint16_t)answer_from_astronode[(rx_length >> 1) - 2 + 1]) << 8) + (uint16_t)(answer_from_astronode[(rx_length >> 1) - 2]);
+    uint16_t msg_length = (rx_length >> 1) - 2; //Divid by 2 and remove escape characters
+    uint16_t cmd_crc = crc_compute(answer_from_astronode, msg_length, 0xFFFF);
+    uint16_t cmd_crc_check = (((uint16_t)answer_from_astronode[msg_length + 1]) << 8) + (uint16_t)(answer_from_astronode[msg_length]);
 
     if (cmd_crc == cmd_crc_check)
     {
