@@ -31,6 +31,7 @@
 #define DEBUG_PRINTLN(x)  Serial.println(x)
 #else
 #define DEBUG_PRINT(x)
+#define DEBUG_PRINTHEX(x)
 #define DEBUG_PRINTLN(x)
 #endif
 
@@ -98,8 +99,7 @@
 #define ETX 0x03
 
 //Command/Response size
-#define COMMAND_MAX_SIZE 200
-#define RESPONSE_MAX_SIZE 100
+#define COMMAND_MAX_SIZE 194
 
 //Device type
 #define TYPE_ASTRONODE_S 3
@@ -118,13 +118,11 @@ class ASTRONODE
     //Global variables
     Stream *_serialPort;
 
-    uint8_t answer_from_astronode[RESPONSE_MAX_SIZE];     //this will contain the response from the dev kit
-    uint8_t answer_from_astronode_hex[2 * RESPONSE_MAX_SIZE]; //this will contain the response from the dev kit
-    uint8_t command_to_astronode[COMMAND_MAX_SIZE];       //max size is payload size = 160 + START + ID + Length (2B) + CRC (2B).
-    uint8_t command_to_astronode_hex[2 * COMMAND_MAX_SIZE];   //max size is payload size = 160 + START + ID + Length (2B) + CRC (2B).
+    uint8_t com_buf_astronode[COMMAND_MAX_SIZE + 2];       //max cmd size + 2 bytes CRC
+    uint8_t com_buf_astronode_hex[2 * (COMMAND_MAX_SIZE + 2) + 2];   //max cmd size + 2 bytes CRC -> double for trasport layer + add 2 escape characters
 
     //Functions prototype
-    uint8_t encode_send_request(uint8_t reg_req, uint8_t *param, uint8_t param_length);
+    uint8_t encode_send_request(uint8_t reg, uint8_t *param, uint8_t param_length);
     uint16_t receive_decode_answer(uint8_t *param, uint8_t param_length);
     void byte_array_to_hex_array(uint8_t *in, uint8_t length, uint8_t *out);
     void hex_array_to_byte_array(uint8_t *in, uint8_t length, uint8_t *out);

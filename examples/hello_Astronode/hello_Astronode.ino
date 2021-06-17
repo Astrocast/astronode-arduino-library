@@ -5,12 +5,12 @@
 
   The circuit:
   - Nucleo-64 STM32l476 (TX -> D2(PA10), RX -> D8(PA9), GND -> GND, 3V3 -> 3V3)
-  - Arduino MKR1400 (TX -> D13(RX), RX -> D14 (TX), GND -> GND, 3V3 -> VCC) 
-  - Arduino UNO (TX -> D13(RX), RX -> D14 (TX), GND -> GND, 3V3 -> VCC) 
+  - Arduino MKR1400 (TX -> D13(RX), RX -> D14 (TX), GND -> GND, 3V3 -> VCC)
+  - Arduino UNO (TX -> D2(with level shifter), RX -> D3(with level shifter), GND -> GND, 3V3 -> VCC)
   - Astronode S devkit (sat or wifi) attached
 */
 
-#include <astronode.h>
+#include "astronode.h"
 
 #if defined ARDUINO_NUCLEO_L476RG
 HardwareSerial Serial1(PA10, PA9);
@@ -19,7 +19,7 @@ HardwareSerial Serial1(PA10, PA9);
 #elif defined(__SAMD21G18A__)
 #define ASTRONODE_SERIAL Serial1
 
-#else 
+#else
 #include <SoftwareSerial.h>
 SoftwareSerial ASTRONODE_SERIAL(2, 3);  // RX, TX
 #endif
