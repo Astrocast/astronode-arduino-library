@@ -9,7 +9,7 @@
   Created on:       01.04.2021
   Supported Hardware: Arduino MKR 1400
 
-  Firmware Version 1.1
+  Firmware Version 1.2
   First version
 ****************************************************************************************/
 
@@ -99,7 +99,7 @@
 #define ETX 0x03
 
 //Command/Response size
-#define COMMAND_MAX_SIZE 194
+#define COMMAND_MAX_SIZE 200
 
 //Device type
 #define TYPE_ASTRONODE_S 3

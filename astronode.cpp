@@ -9,7 +9,7 @@
   Created on:       01.04.2021
   Supported Hardware: Arduino MKR 1400
 
-  Firmware Version 1.1
+  Firmware Version 1.2
   First version
 ****************************************************************************************/
 
@@ -66,15 +66,24 @@ uint8_t ASTRONODE::configuration_write(bool with_pl_ack,
   //Send request
   if (encode_send_request(CFG_WR, param_w, sizeof(param_w)))
   {
-    if (receive_decode_answer(NULL, 0) == CFG_WA)
+    switch (receive_decode_answer(NULL, 0))
     {
-      DEBUG_PRINTLN(F("SUCCESS"));
+      case CFG_WA:
+        {
+          DEBUG_PRINTLN(F("SUCCESS"));
 
-      return SUCCESS;
-    }
-    else
-    {
-      DEBUG_PRINTLN(F("FAILED"));
+          return SUCCESS;
+        }
+        break;
+      case CRC_NOT_VALID:
+        {
+          DEBUG_PRINTLN(F("FAILED - Discrepancy between provided CRC and expected CRC."));
+        }
+        break;
+      default:
+        {
+          DEBUG_PRINTLN(F("FAILED - UNKOWN"));
+        }
     }
   }
   return ERROR;
@@ -117,6 +126,15 @@ uint8_t ASTRONODE::wifi_configuration_write(const char *wland_ssid, const char *
           DEBUG_PRINTLN(F("FAILED - Failed to write the Wi-Fi settings (SSID, password, token) to the flash."));
         }
         break;
+      case CRC_NOT_VALID:
+        {
+          DEBUG_PRINTLN(F("FAILED - Discrepancy between provided CRC and expected CRC."));
+        }
+        break;
+      default:
+        {
+          DEBUG_PRINTLN(F("FAILED - UNKOWN"));
+        }
     }
   }
   return ERROR;
@@ -130,52 +148,66 @@ uint8_t ASTRONODE::configuration_read(void)
   //Send request
   if (encode_send_request(CFG_RR, NULL, 0))
   {
-    if (receive_decode_answer(param_a, sizeof(param_a)) == CFG_RA)
+
+    switch (receive_decode_answer(param_a, sizeof(param_a)))
     {
-      config.product_id        = param_a[0];
-      config.hardware_rev      = param_a[1];
-      config.firmware_maj_ver    = param_a[2];
-      config.firmware_min_ver    = param_a[3];
-      config.firmware_rev      = param_a[4];
-      config.with_pl_ack       = (param_a[5] & (1 << 0));
-      config.with_geoloc       = (param_a[5] & (1 << 1));
-      config.with_ephemeris    = (param_a[5] & (1 << 2));
-      config.with_deep_sleep_en    = (param_a[5] & (1 << 3));
-      config.with_msg_ack_pin_en   = (param_a[7] & (1 << 0));
-      config.with_msg_reset_pin_en = (param_a[7] & (1 << 1));
+      case CFG_RA:
+        {
+          config.product_id        = param_a[0];
+          config.hardware_rev      = param_a[1];
+          config.firmware_maj_ver    = param_a[2];
+          config.firmware_min_ver    = param_a[3];
+          config.firmware_rev      = param_a[4];
+          config.with_pl_ack       = (param_a[5] & (1 << 0));
+          config.with_geoloc       = (param_a[5] & (1 << 1));
+          config.with_ephemeris    = (param_a[5] & (1 << 2));
+          config.with_deep_sleep_en    = (param_a[5] & (1 << 3));
+          config.with_msg_ack_pin_en   = (param_a[7] & (1 << 0));
+          config.with_msg_reset_pin_en = (param_a[7] & (1 << 1));
 
-      DEBUG_PRINTLN(F("terminal configuration: "));
-      DEBUG_PRINT(F("    product_id: "));
-      if (config.product_id == TYPE_ASTRONODE_S)
-      {
-        DEBUG_PRINTLN(F("Commercial Satellite Astronode"));
-      }
-      else if (config.product_id == TYPE_WIFI_DEVKIT)
-      {
-        DEBUG_PRINTLN(F("Commercial Wi-Fi Dev Kit"));
-      }
-      DEBUG_PRINT(F("    hardware revision: "));
-      DEBUG_PRINTLN(config.hardware_rev);
-      DEBUG_PRINT(F("    firmware version: "));
-      DEBUG_PRINT(config.firmware_maj_ver);
-      DEBUG_PRINT(F("."));
-      DEBUG_PRINT(config.firmware_min_ver);
-      DEBUG_PRINT(F("."));
-      DEBUG_PRINTLN(config.firmware_rev);
-      DEBUG_PRINT(F("    with payload ack (1=yes,0=no): "));
-      DEBUG_PRINTLN(config.with_pl_ack);
-      DEBUG_PRINT(F("    with geolocation (1=yes,0=no): "));
-      DEBUG_PRINTLN(config.with_geoloc);
-      DEBUG_PRINT(F("    with ephemeris (1=yes,0=no): "));
-      DEBUG_PRINTLN(config.with_ephemeris);
-      DEBUG_PRINT(F("    with deep sleep mode enable (1=yes,0=no): "));
-      DEBUG_PRINTLN(config.with_deep_sleep_en);
-      DEBUG_PRINT(F("    with message ack pin enable (1=yes,0=no): "));
-      DEBUG_PRINTLN(config.with_msg_ack_pin_en);
-      DEBUG_PRINT(F("    with message reset pin enable (1=yes,0=no): "));
-      DEBUG_PRINTLN(config.with_msg_reset_pin_en);
+          DEBUG_PRINTLN(F("terminal configuration: "));
+          DEBUG_PRINT(F("    product_id: "));
+          if (config.product_id == TYPE_ASTRONODE_S)
+          {
+            DEBUG_PRINTLN(F("Commercial Satellite Astronode"));
+          }
+          else if (config.product_id == TYPE_WIFI_DEVKIT)
+          {
+            DEBUG_PRINTLN(F("Commercial Wi-Fi Dev Kit"));
+          }
+          DEBUG_PRINT(F("    hardware revision: "));
+          DEBUG_PRINTLN(config.hardware_rev);
+          DEBUG_PRINT(F("    firmware version: "));
+          DEBUG_PRINT(config.firmware_maj_ver);
+          DEBUG_PRINT(F("."));
+          DEBUG_PRINT(config.firmware_min_ver);
+          DEBUG_PRINT(F("."));
+          DEBUG_PRINTLN(config.firmware_rev);
+          DEBUG_PRINT(F("    with payload ack (1=yes,0=no): "));
+          DEBUG_PRINTLN(config.with_pl_ack);
+          DEBUG_PRINT(F("    with geolocation (1=yes,0=no): "));
+          DEBUG_PRINTLN(config.with_geoloc);
+          DEBUG_PRINT(F("    with ephemeris (1=yes,0=no): "));
+          DEBUG_PRINTLN(config.with_ephemeris);
+          DEBUG_PRINT(F("    with deep sleep mode enable (1=yes,0=no): "));
+          DEBUG_PRINTLN(config.with_deep_sleep_en);
+          DEBUG_PRINT(F("    with message ack pin enable (1=yes,0=no): "));
+          DEBUG_PRINTLN(config.with_msg_ack_pin_en);
+          DEBUG_PRINT(F("    with message reset pin enable (1=yes,0=no): "));
+          DEBUG_PRINTLN(config.with_msg_reset_pin_en);
 
-      return SUCCESS;
+          return SUCCESS;
+        }
+        break;
+      case CRC_NOT_VALID:
+        {
+          DEBUG_PRINTLN(F("FAILED - Discrepancy between provided CRC and expected CRC."));
+        }
+        break;
+      default:
+        {
+          DEBUG_PRINTLN(F("FAILED - UNKOWN"));
+        }
     }
   }
   return ERROR;
@@ -232,6 +264,15 @@ uint8_t ASTRONODE::enqueue_payload(uint8_t *data, uint8_t length, uint16_t id)
           DEBUG_PRINTLN(F("FAILED - Failed to queue the payload because the sending queue is already full."));
         }
         break;
+      case CRC_NOT_VALID:
+        {
+          DEBUG_PRINTLN(F("FAILED - Discrepancy between provided CRC and expected CRC."));
+        }
+        break;
+      default:
+        {
+          DEBUG_PRINTLN(F("FAILED - UNKOWN"));
+        }
     }
   }
   return ERROR;
@@ -265,6 +306,15 @@ uint8_t ASTRONODE::dequeue_payload(uint16_t *id)
           DEBUG_PRINTLN(F("FAILED - Failed to dequeue a payload from the buffer because the buffer is empty."));
         }
         break;
+      case CRC_NOT_VALID:
+        {
+          DEBUG_PRINTLN(F("FAILED - Discrepancy between provided CRC and expected CRC."));
+        }
+        break;
+      default:
+        {
+          DEBUG_PRINTLN(F("FAILED - UNKOWN"));
+        }
     }
   }
   return ERROR;
@@ -280,11 +330,24 @@ uint8_t ASTRONODE::clear_free_payloads(void)
   //Send request
   if (encode_send_request(PLD_FR, NULL, 0))
   {
-    if (receive_decode_answer(NULL, 0) == PLD_FA)
+    switch (receive_decode_answer(NULL, 0))
     {
-      DEBUG_PRINTLN(F("SUCCESS"));
+      case PLD_FA:
+        {
+          DEBUG_PRINTLN(F("SUCCESS"));
 
-      return SUCCESS;
+          return SUCCESS;
+        }
+        break;
+      case CRC_NOT_VALID:
+        {
+          DEBUG_PRINTLN(F("FAILED - Discrepancy between provided CRC and expected CRC."));
+        }
+        break;
+      default:
+        {
+          DEBUG_PRINTLN(F("FAILED - UNKOWN"));
+        }
     }
   }
   return ERROR;
@@ -317,6 +380,10 @@ uint8_t ASTRONODE::geolocation_write(int32_t lat, int32_t lon)
           DEBUG_PRINTLN(F("FAILED - Invalid position"));
         }
         break;
+      default:
+        {
+          DEBUG_PRINTLN(F("FAILED - UNKOWN"));
+        }
     }
   }
   return ERROR;
@@ -332,17 +399,26 @@ uint8_t ASTRONODE::read_satellite_ack(uint16_t *id)
   //Send request
   if (encode_send_request(SAK_RR, NULL, 0))
   {
-    if (receive_decode_answer(param_a, sizeof(param_a)) == SAK_RA)
+    switch (receive_decode_answer(param_a, sizeof(param_a)))
     {
-      *id = (((uint16_t)param_a[1]) << 8) + (uint16_t)(param_a[0]);
+      case SAK_RA:
+        {
+          *id = (((uint16_t)param_a[1]) << 8) + (uint16_t)(param_a[0]);
 
-      DEBUG_PRINTLN(*id);
+          DEBUG_PRINTLN(*id);
 
-      return SUCCESS;
-    }
-    else
-    {
-      DEBUG_PRINTLN(F("FAILED - no message acknowledged"));
+          return SUCCESS;
+        }
+        break;
+      case CRC_NOT_VALID:
+        {
+          DEBUG_PRINTLN(F("FAILED - Discrepancy between provided CRC and expected CRC."));
+        }
+        break;
+      default:
+        {
+          DEBUG_PRINTLN(F("FAILED - no message acknowledged"));
+        }
     }
   }
   return ERROR;
@@ -358,11 +434,24 @@ uint8_t ASTRONODE::clear_satellite_ack(void)
   //Send request
   if (encode_send_request(SAK_CR, NULL, 0))
   {
-    if (receive_decode_answer(NULL, 0) == SAK_CA)
+    switch (receive_decode_answer(NULL, 0))
     {
-      DEBUG_PRINTLN(F("Satellite acknowledge cleared."));
+      case SAK_CA:
+        {
+          DEBUG_PRINTLN(F("Satellite acknowledge cleared."));
 
-      return SUCCESS;
+          return SUCCESS;
+        }
+        break;
+      case CRC_NOT_VALID:
+        {
+          DEBUG_PRINTLN(F("FAILED - Discrepancy between provided CRC and expected CRC."));
+        }
+        break;
+      default:
+        {
+          DEBUG_PRINTLN(F("FAILED - No satellite acknowledge to clear."));
+        }
     }
   }
   return ERROR;
@@ -378,11 +467,24 @@ uint8_t ASTRONODE::clear_reset_event(void)
   //Send request
   if (encode_send_request(RES_CR, NULL, 0))
   {
-    if (receive_decode_answer(NULL, 0) == RES_CA)
+    switch (receive_decode_answer(NULL, 0))
     {
-      DEBUG_PRINTLN(F("RESET event cleared."));
+      case RES_CA:
+        {
+          DEBUG_PRINTLN(F("RESET event cleared."));
 
-      return SUCCESS;
+          return SUCCESS;
+        }
+        break;
+      case CRC_NOT_VALID:
+        {
+          DEBUG_PRINTLN(F("FAILED - Discrepancy between provided CRC and expected CRC."));
+        }
+        break;
+      default:
+        {
+          DEBUG_PRINTLN(F("FAILED - No event to clear."));
+        }
     }
   }
   return ERROR;
@@ -398,29 +500,43 @@ uint8_t ASTRONODE::event_read(uint8_t *event_type)
   //Send request
   if (encode_send_request(EVT_RR, NULL, 0))
   {
-    if (receive_decode_answer(&param_a, sizeof(param_a)) == EVT_RA)
+    switch (receive_decode_answer(&param_a, sizeof(param_a)))
     {
-      if (param_a & (1 << 0))
-      {
-        DEBUG_PRINTLN(F("Satellite Acknowledgment (SAK) Available."));
+      case EVT_RA:
+        {
+          if (param_a & (1 << 0))
+          {
+            DEBUG_PRINTLN(F("Satellite Acknowledgment (SAK) Available."));
 
-        *event_type = EVENT_SAK;
-      }
-      else if (param_a & (1 << 1))
-      {
-        DEBUG_PRINTLN(F("Terminal has reset."));
+            *event_type = EVENT_SAK;
+          }
+          else if (param_a & (1 << 1))
+          {
+            DEBUG_PRINTLN(F("Terminal has reset."));
 
-        *event_type = EVENT_RESET;
-      }
-      else
-      {
-        DEBUG_PRINTLN(F("No event"));
+            *event_type = EVENT_RESET;
+          }
+          else
+          {
+            DEBUG_PRINTLN(F("No event"));
 
-        *event_type = EVENT_NO_EVENT;
-      }
-      return SUCCESS;
+            *event_type = EVENT_NO_EVENT;
+          }
+          return SUCCESS;
+        }
+        break;
+      case CRC_NOT_VALID:
+        {
+          DEBUG_PRINTLN(F("FAILED - Discrepancy between provided CRC and expected CRC."));
+        }
+        break;
+      default:
+        {
+          DEBUG_PRINTLN(F("FAILED - No event to read."));
+        }
     }
   }
+
   return ERROR;
 }
 
@@ -434,16 +550,28 @@ uint8_t ASTRONODE::guid_read(String *guid)
   //Send request
   if (encode_send_request(DGI_RR, NULL, 0))
   {
-    if (receive_decode_answer(param_a, sizeof(param_a)) == DGI_RA)
+    switch (receive_decode_answer(param_a, sizeof(param_a)))
     {
-      for (uint8_t i = 0; i < sizeof(param_a); i++)
-      {
-        guid->concat((char)param_a[i]);
-      }
+      case DGI_RA:
+        {
+          for (uint8_t i = 0; i < sizeof(param_a); i++)
+          {
+            guid->concat((char)param_a[i]);
+          }
 
-      DEBUG_PRINTLN(*guid);
+          DEBUG_PRINTLN(*guid);
 
-      return SUCCESS;
+          return SUCCESS;
+        }
+        break;
+      case CRC_NOT_VALID:
+        {
+          DEBUG_PRINTLN(F("FAILED - Discrepancy between provided CRC and expected CRC."));
+        }
+        break;
+      default: {
+          DEBUG_PRINTLN(F("FAILED - UNKNOWN"));
+        }
     }
   }
   return ERROR;
@@ -459,16 +587,28 @@ uint8_t ASTRONODE::serial_number_read(String *sn)
   //Send request
   if (encode_send_request(DSN_RR, NULL, 0))
   {
-    if (receive_decode_answer(param_a, sizeof(param_a)) == DSN_RA)
+    switch (receive_decode_answer(param_a, sizeof(param_a)))
     {
-      for (uint8_t i = 0; i < sizeof(param_a); i++)
-      {
-        sn->concat((char)param_a[i]);
-      }
+      case DSN_RA:
+        {
+          for (uint8_t i = 0; i < sizeof(param_a); i++)
+          {
+            sn->concat((char)param_a[i]);
+          }
 
-      DEBUG_PRINTLN(*sn);
+          DEBUG_PRINTLN(*sn);
 
-      return SUCCESS;
+          return SUCCESS;
+        }
+        break;
+      case CRC_NOT_VALID:
+        {
+          DEBUG_PRINTLN(F("FAILED - Discrepancy between provided CRC and expected CRC."));
+        }
+        break;
+      default: {
+          DEBUG_PRINTLN(F("FAILED - UNKNOWN"));
+        }
     }
   }
   return ERROR;
@@ -484,15 +624,27 @@ uint8_t ASTRONODE::rtc_read(uint32_t *time)
   //Send request
   if (encode_send_request(RTC_RR, NULL, 0))
   {
-    if (receive_decode_answer(param_a, sizeof(param_a)) == RTC_RA)
+    switch (receive_decode_answer(param_a, sizeof(param_a)))
     {
-      uint32_t time_tmp = (((uint32_t)param_a[3]) << 24) + (((uint32_t)param_a[2]) << 16) + (((uint32_t)param_a[1]) << 8) + (uint32_t)(param_a[0]);
+      case RTC_RA:
+        {
+          uint32_t time_tmp = (((uint32_t)param_a[3]) << 24) + (((uint32_t)param_a[2]) << 16) + (((uint32_t)param_a[1]) << 8) + (uint32_t)(param_a[0]);
 
-      *time = time_tmp + 1514761200; //2018-01-01T00:00:00Z (= Astrocast time)
+          *time = time_tmp + 1514761200; //2018-01-01T00:00:00Z (= Astrocast time)
 
-      DEBUG_PRINTLN(*time);
+          DEBUG_PRINTLN(*time);
 
-      return SUCCESS;
+          return SUCCESS;
+        }
+        break;
+      case CRC_NOT_VALID:
+        {
+          DEBUG_PRINTLN(F("FAILED - Discrepancy between provided CRC and expected CRC."));
+        }
+        break;
+      default: {
+          DEBUG_PRINTLN(F("FAILED - UNKNOWN"));
+        }
     }
   }
   return ERROR;
@@ -508,15 +660,23 @@ uint8_t ASTRONODE::factory_reset(void)
   //Send request
   if (encode_send_request(CFG_FR, NULL, 0))
   {
-    if (receive_decode_answer(NULL, 0) == CFG_FA)
+    switch (receive_decode_answer(NULL, 0))
     {
-      DEBUG_PRINTLN(F("SUCCES"));
+      case CFG_FA:
+        {
+          DEBUG_PRINTLN(F("SUCCESS"));
 
-      return SUCCESS;
-    }
-    else
-    {
-      DEBUG_PRINTLN(F("FAILED"));
+          return SUCCESS;
+        }
+        break;
+      case CRC_NOT_VALID:
+        {
+          DEBUG_PRINTLN(F("FAILED - Discrepancy between provided CRC and expected CRC."));
+        }
+        break;
+      default: {
+          DEBUG_PRINTLN(F("FAILED - UNKNOWN"));
+        }
     }
   }
   return ERROR;
@@ -532,15 +692,23 @@ uint8_t ASTRONODE::configuration_save(void)
   //Send request
   if (encode_send_request(CFG_SR, NULL, 0))
   {
-    if (receive_decode_answer(NULL, 0) == CFG_SA)
+    switch (receive_decode_answer(NULL, 0))
     {
-      DEBUG_PRINTLN(F("SUCCES"));
+      case CFG_SA:
+        {
+          DEBUG_PRINTLN(F("SUCCESS"));
 
-      return SUCCESS;
-    }
-    else
-    {
-      DEBUG_PRINTLN(F("FAILED"));
+          return SUCCESS;
+        }
+        break;
+      case CRC_NOT_VALID:
+        {
+          DEBUG_PRINTLN(F("FAILED - Discrepancy between provided CRC and expected CRC."));
+        }
+        break;
+      default: {
+          DEBUG_PRINTLN(F("FAILED - UNKNOWN"));
+        }
     }
   }
   return ERROR;
@@ -602,16 +770,16 @@ uint16_t ASTRONODE::receive_decode_answer(uint8_t *param, uint8_t param_length)
   if (rx_length)
   {
     /*
-      DEBUG_PRINT(F("terminal -> asset (+ CRC + HEX encoding): "));
-      print_array_to_hex(com_buf_astronode_hex, rx_length);
+        DEBUG_PRINT(F("terminal -> asset (+ CRC + HEX encoding): "));
+        print_array_to_hex(com_buf_astronode_hex, rx_length);
     */
 
     //Translate to binary
     hex_array_to_byte_array(&com_buf_astronode_hex[1], rx_length, com_buf_astronode); // Skip STX, ETX not in buffer
 
     /*
-      DEBUG_PRINT(F("terminal -> asset (+ CRC): "));
-      print_array_to_hex(com_buf_astronode, rx_length >> 1);
+        DEBUG_PRINT(F("terminal -> asset (+ CRC): "));
+        print_array_to_hex(com_buf_astronode, rx_length >> 1);
     */
 
     //Verify CRC
