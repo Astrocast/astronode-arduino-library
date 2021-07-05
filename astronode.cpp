@@ -52,7 +52,7 @@ uint8_t ASTRONODE::configuration_write(bool with_pl_ack,
                                        bool with_reset_event_pin_mask)
 {
   //Set parameters
-  uint8_t param_w[3];
+  uint8_t param_w[3] = {};
 
   if (with_pl_ack)        param_w[0] |= 1 << 0;
   if (with_geoloc)        param_w[0] |= 1 << 1;
@@ -78,6 +78,11 @@ uint8_t ASTRONODE::configuration_write(bool with_pl_ack,
       case CRC_NOT_VALID:
         {
           DEBUG_PRINTLN(F("FAILED - Discrepancy between provided CRC and expected CRC."));
+        }
+        break;
+	  case LENGTH_NOT_VALID:
+        {
+          DEBUG_PRINTLN(F("FAILED - Message exceeds the maximum length for a frame."));
         }
         break;
       default:
@@ -131,6 +136,11 @@ uint8_t ASTRONODE::wifi_configuration_write(const char *wland_ssid, const char *
           DEBUG_PRINTLN(F("FAILED - Discrepancy between provided CRC and expected CRC."));
         }
         break;
+	  case LENGTH_NOT_VALID:
+        {
+          DEBUG_PRINTLN(F("FAILED - Message exceeds the maximum length for a frame."));
+        }
+        break;
       default:
         {
           DEBUG_PRINTLN(F("FAILED - UNKOWN"));
@@ -143,7 +153,7 @@ uint8_t ASTRONODE::wifi_configuration_write(const char *wland_ssid, const char *
 uint8_t ASTRONODE::configuration_read(void)
 {
   //Set parameters
-  uint8_t param_a[8];
+  uint8_t param_a[8] = {};
 
   //Send request
   if (encode_send_request(CFG_RR, NULL, 0))
@@ -204,6 +214,11 @@ uint8_t ASTRONODE::configuration_read(void)
           DEBUG_PRINTLN(F("FAILED - Discrepancy between provided CRC and expected CRC."));
         }
         break;
+	  case LENGTH_NOT_VALID:
+        {
+          DEBUG_PRINTLN(F("FAILED - Message exceeds the maximum length for a frame."));
+        }
+        break;
       default:
         {
           DEBUG_PRINTLN(F("FAILED - UNKOWN"));
@@ -216,8 +231,8 @@ uint8_t ASTRONODE::configuration_read(void)
 uint8_t ASTRONODE::enqueue_payload(uint8_t *data, uint8_t length, uint16_t id)
 {
   //Set parameters
-  uint8_t param_w[160 + 2];
-  uint8_t param_a[2];
+  uint8_t param_w[160 + 2] = {};
+  uint8_t param_a[2] = {};
 
   DEBUG_PRINT(F("Queuing payload with ID #"));
   DEBUG_PRINT(id);
@@ -254,11 +269,6 @@ uint8_t ASTRONODE::enqueue_payload(uint8_t *data, uint8_t length, uint16_t id)
           DEBUG_PRINTLN(F("FAILED - Failed to queue the payload because the Payload ID provided by the asset is already in use in the terminal queue."));
         }
         break;
-      case LENGTH_NOT_VALID:
-        {
-          DEBUG_PRINTLN(F("FAILED - Message exceeds the maximum length for a frame."));
-        }
-        break;
       case BUFFER_FULL:
         {
           DEBUG_PRINTLN(F("FAILED - Failed to queue the payload because the sending queue is already full."));
@@ -267,6 +277,11 @@ uint8_t ASTRONODE::enqueue_payload(uint8_t *data, uint8_t length, uint16_t id)
       case CRC_NOT_VALID:
         {
           DEBUG_PRINTLN(F("FAILED - Discrepancy between provided CRC and expected CRC."));
+        }
+        break;
+		  case LENGTH_NOT_VALID:
+        {
+          DEBUG_PRINTLN(F("FAILED - Message exceeds the maximum length for a frame."));
         }
         break;
       default:
@@ -281,7 +296,7 @@ uint8_t ASTRONODE::enqueue_payload(uint8_t *data, uint8_t length, uint16_t id)
 uint8_t ASTRONODE::dequeue_payload(uint16_t *id)
 {
   //Set parameters
-  uint8_t param_a[2];
+  uint8_t param_a[2] = {};
 
   DEBUG_PRINTLN(F("Remove oldest payload from queue: "));
 
@@ -309,6 +324,11 @@ uint8_t ASTRONODE::dequeue_payload(uint16_t *id)
       case CRC_NOT_VALID:
         {
           DEBUG_PRINTLN(F("FAILED - Discrepancy between provided CRC and expected CRC."));
+        }
+        break;
+		  case LENGTH_NOT_VALID:
+        {
+          DEBUG_PRINTLN(F("FAILED - Message exceeds the maximum length for a frame."));
         }
         break;
       default:
@@ -344,6 +364,11 @@ uint8_t ASTRONODE::clear_free_payloads(void)
           DEBUG_PRINTLN(F("FAILED - Discrepancy between provided CRC and expected CRC."));
         }
         break;
+		  case LENGTH_NOT_VALID:
+        {
+          DEBUG_PRINTLN(F("FAILED - Message exceeds the maximum length for a frame."));
+        }
+        break;
       default:
         {
           DEBUG_PRINTLN(F("FAILED - UNKOWN"));
@@ -356,7 +381,7 @@ uint8_t ASTRONODE::clear_free_payloads(void)
 uint8_t ASTRONODE::geolocation_write(int32_t lat, int32_t lon)
 {
   //Set parameters
-  uint8_t param_w[8];
+  uint8_t param_w[8] = {};
 
   memcpy(&param_w[0], &lat, sizeof(lat));
   memcpy(&param_w[4], &lon, sizeof(lon));
@@ -380,6 +405,16 @@ uint8_t ASTRONODE::geolocation_write(int32_t lat, int32_t lon)
           DEBUG_PRINTLN(F("FAILED - Invalid position"));
         }
         break;
+		      case CRC_NOT_VALID:
+        {
+          DEBUG_PRINTLN(F("FAILED - Discrepancy between provided CRC and expected CRC."));
+        }
+        break;
+		  case LENGTH_NOT_VALID:
+        {
+          DEBUG_PRINTLN(F("FAILED - Message exceeds the maximum length for a frame."));
+        }
+        break;
       default:
         {
           DEBUG_PRINTLN(F("FAILED - UNKOWN"));
@@ -392,7 +427,7 @@ uint8_t ASTRONODE::geolocation_write(int32_t lat, int32_t lon)
 uint8_t ASTRONODE::read_satellite_ack(uint16_t *id)
 {
   //Set parameters
-  uint8_t param_a[2];
+  uint8_t param_a[2] = {};
 
   DEBUG_PRINT(F("Satellite acknowledge received with ID #: "));
 
@@ -413,6 +448,11 @@ uint8_t ASTRONODE::read_satellite_ack(uint16_t *id)
       case CRC_NOT_VALID:
         {
           DEBUG_PRINTLN(F("FAILED - Discrepancy between provided CRC and expected CRC."));
+        }
+        break;
+			  case LENGTH_NOT_VALID:
+        {
+          DEBUG_PRINTLN(F("FAILED - Message exceeds the maximum length for a frame."));
         }
         break;
       default:
@@ -448,6 +488,11 @@ uint8_t ASTRONODE::clear_satellite_ack(void)
           DEBUG_PRINTLN(F("FAILED - Discrepancy between provided CRC and expected CRC."));
         }
         break;
+			  case LENGTH_NOT_VALID:
+        {
+          DEBUG_PRINTLN(F("FAILED - Message exceeds the maximum length for a frame."));
+        }
+        break;
       default:
         {
           DEBUG_PRINTLN(F("FAILED - No satellite acknowledge to clear."));
@@ -479,6 +524,11 @@ uint8_t ASTRONODE::clear_reset_event(void)
       case CRC_NOT_VALID:
         {
           DEBUG_PRINTLN(F("FAILED - Discrepancy between provided CRC and expected CRC."));
+        }
+        break;
+			  case LENGTH_NOT_VALID:
+        {
+          DEBUG_PRINTLN(F("FAILED - Message exceeds the maximum length for a frame."));
         }
         break;
       default:
@@ -530,6 +580,11 @@ uint8_t ASTRONODE::event_read(uint8_t *event_type)
           DEBUG_PRINTLN(F("FAILED - Discrepancy between provided CRC and expected CRC."));
         }
         break;
+			  case LENGTH_NOT_VALID:
+        {
+          DEBUG_PRINTLN(F("FAILED - Message exceeds the maximum length for a frame."));
+        }
+        break;
       default:
         {
           DEBUG_PRINTLN(F("FAILED - No event to read."));
@@ -543,7 +598,7 @@ uint8_t ASTRONODE::event_read(uint8_t *event_type)
 uint8_t ASTRONODE::guid_read(String *guid)
 {
   //Set parameters
-  uint8_t param_a[36];
+  uint8_t param_a[36] = {};
 
   DEBUG_PRINT(F("GUID: "));
 
@@ -569,6 +624,11 @@ uint8_t ASTRONODE::guid_read(String *guid)
           DEBUG_PRINTLN(F("FAILED - Discrepancy between provided CRC and expected CRC."));
         }
         break;
+			  case LENGTH_NOT_VALID:
+        {
+          DEBUG_PRINTLN(F("FAILED - Message exceeds the maximum length for a frame."));
+        }
+        break;
       default: {
           DEBUG_PRINTLN(F("FAILED - UNKNOWN"));
         }
@@ -580,7 +640,7 @@ uint8_t ASTRONODE::guid_read(String *guid)
 uint8_t ASTRONODE::serial_number_read(String *sn)
 {
   //Set parameters
-  uint8_t param_a[16];
+  uint8_t param_a[16] = {};
 
   DEBUG_PRINT(F("Serial number: "));
 
@@ -606,6 +666,11 @@ uint8_t ASTRONODE::serial_number_read(String *sn)
           DEBUG_PRINTLN(F("FAILED - Discrepancy between provided CRC and expected CRC."));
         }
         break;
+			  case LENGTH_NOT_VALID:
+        {
+          DEBUG_PRINTLN(F("FAILED - Message exceeds the maximum length for a frame."));
+        }
+        break;
       default: {
           DEBUG_PRINTLN(F("FAILED - UNKNOWN"));
         }
@@ -617,7 +682,7 @@ uint8_t ASTRONODE::serial_number_read(String *sn)
 uint8_t ASTRONODE::rtc_read(uint32_t *time)
 {
   //Set parameters
-  uint8_t param_a[4];
+  uint8_t param_a[4] = {};
 
   DEBUG_PRINT(F("RTC time: "));
 
@@ -640,6 +705,11 @@ uint8_t ASTRONODE::rtc_read(uint32_t *time)
       case CRC_NOT_VALID:
         {
           DEBUG_PRINTLN(F("FAILED - Discrepancy between provided CRC and expected CRC."));
+        }
+        break;
+			  case LENGTH_NOT_VALID:
+        {
+          DEBUG_PRINTLN(F("FAILED - Message exceeds the maximum length for a frame."));
         }
         break;
       default: {
@@ -674,6 +744,11 @@ uint8_t ASTRONODE::factory_reset(void)
           DEBUG_PRINTLN(F("FAILED - Discrepancy between provided CRC and expected CRC."));
         }
         break;
+			  case LENGTH_NOT_VALID:
+        {
+          DEBUG_PRINTLN(F("FAILED - Message exceeds the maximum length for a frame."));
+        }
+        break;
       default: {
           DEBUG_PRINTLN(F("FAILED - UNKNOWN"));
         }
@@ -706,6 +781,11 @@ uint8_t ASTRONODE::configuration_save(void)
           DEBUG_PRINTLN(F("FAILED - Discrepancy between provided CRC and expected CRC."));
         }
         break;
+			  case LENGTH_NOT_VALID:
+        {
+          DEBUG_PRINTLN(F("FAILED - Message exceeds the maximum length for a frame."));
+        }
+        break;
       default: {
           DEBUG_PRINTLN(F("FAILED - UNKNOWN"));
         }
@@ -734,10 +814,10 @@ uint8_t ASTRONODE::encode_send_request(uint8_t reg, uint8_t *param, uint8_t para
   memcpy(&com_buf_astronode[index_buf_cmd], &cmd_crc, sizeof(cmd_crc));
   index_buf_cmd += sizeof(cmd_crc);
 
-  /*
-    DEBUG_PRINT(F("asset -> terminal (+ CRC): "));
-    print_array_to_hex(com_buf_astronode, index_buf_cmd);
-  */
+
+   //DEBUG_PRINT(F("asset -> terminal (+ CRC): "));
+   //print_array_to_hex(com_buf_astronode, index_buf_cmd);
+
 
   //Add escape characters
   com_buf_astronode_hex[index_buf_cmd_hex++] = STX;
@@ -749,10 +829,10 @@ uint8_t ASTRONODE::encode_send_request(uint8_t reg, uint8_t *param, uint8_t para
   //Add escape characters
   com_buf_astronode_hex[index_buf_cmd_hex++] = ETX;
 
-  /*
-    DEBUG_PRINT(F("asset -> terminal (+ CRC + HEX encoding): "));
-    print_array_to_hex(com_buf_astronode_hex, index_buf_cmd_hex);
-  */
+  
+   //DEBUG_PRINT(F("asset -> terminal (+ CRC + HEX encoding): "));
+   //print_array_to_hex(com_buf_astronode_hex, index_buf_cmd_hex);
+  
 
   //Write command
   if (_serialPort->write(com_buf_astronode_hex, index_buf_cmd_hex) == (size_t)(index_buf_cmd_hex))
@@ -769,18 +849,16 @@ uint16_t ASTRONODE::receive_decode_answer(uint8_t *param, uint8_t param_length)
 
   if (rx_length)
   {
-    /*
-        DEBUG_PRINT(F("terminal -> asset (+ CRC + HEX encoding): "));
-        print_array_to_hex(com_buf_astronode_hex, rx_length);
-    */
+    
+    //DEBUG_PRINT(F("terminal -> asset (+ CRC + HEX encoding): "));
+    //print_array_to_hex(com_buf_astronode_hex, rx_length);
+    
 
     //Translate to binary
     hex_array_to_byte_array(&com_buf_astronode_hex[1], rx_length, com_buf_astronode); // Skip STX, ETX not in buffer
 
-    /*
-        DEBUG_PRINT(F("terminal -> asset (+ CRC): "));
-        print_array_to_hex(com_buf_astronode, rx_length >> 1);
-    */
+    //DEBUG_PRINT(F("terminal -> asset (+ CRC): "));
+    //print_array_to_hex(com_buf_astronode, rx_length >> 1);
 
     //Verify CRC
     uint16_t msg_length = (rx_length >> 1) - 2; //Divid by 2 and remove escape characters
