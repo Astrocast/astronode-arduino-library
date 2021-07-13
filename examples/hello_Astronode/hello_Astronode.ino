@@ -87,6 +87,9 @@ void setup()
   String guid;
   astronode.guid_read(&guid);
 
+  //Clear old messages
+  astronode.clear_free_payloads();
+  
   //Try enqueueing a first message in the queue
   if (astronode.enqueue_payload(data, sizeof(data), counter)) {
     counter++;
@@ -116,6 +119,8 @@ void loop()  {
   else if (event_type == EVENT_RESET)
   {
     astronode.clear_reset_event();
+    astronode.enqueue_payload(data, sizeof(data), counter);
+    counter++;
   }
 
   delay(10000);
