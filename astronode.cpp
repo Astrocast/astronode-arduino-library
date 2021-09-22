@@ -299,7 +299,7 @@ uint8_t ASTRONODE::rtc_read(uint32_t *time)
     {
       uint32_t time_tmp = (((uint32_t)param_a[3]) << 24) + (((uint32_t)param_a[2]) << 16) + (((uint32_t)param_a[1]) << 8) + (uint32_t)(param_a[0]);
 
-      *time = time_tmp + 1514761200; //2018-01-01T00:00:00Z (= Astrocast time)
+      *time = time_tmp + 1514764800; //2018-01-01T00:00:00Z (= Astrocast time)
 
       return ASN_NO_ERROR;
     }
