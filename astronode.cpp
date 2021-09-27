@@ -798,7 +798,7 @@ uint16_t ASTRONODE::receive_decode_answer(uint8_t *param, uint8_t param_length)
   //Read answer
   size_t rx_length = _serialPort->readBytesUntil(ETX, (char *)com_buf_astronode_hex, 2 * COMMAND_MAX_SIZE);
 
-  if (rx_length)
+  if (rx_length > 6) //At least STX (1), ETX (1), CRC (4)
   {
 
     //DEBUG_PRINTLN(F("terminal -> asset (+ CRC + HEX encoding): "));
