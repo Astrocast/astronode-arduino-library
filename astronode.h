@@ -1,15 +1,15 @@
 ﻿/******************************************************************************************
-  File:        astronode.h
-  Author:      Raphael Valceschini
-  E-mail:      valceschini.r@bluewin.ch
+* File:        astronode.h
+* Author:      Raphael Valceschini
+* Compagny:    Astrocast SA
+* Website:     https://www.astrocast.com/
+* E-mail:      rvalceschini@astrocast.com
 ******************************************************************************************/
 /****************************************************************************************
-
-  Created on:       11.10.2021
-  Supported Hardware: Adafruit Feather M0 Adalogger + Astronode / Feather carrier board
-
-  Firmware Version 1.0
-  First version
+* Created on: 			01.04.2021
+* Supported Hardware: Arduino MKR 1400
+*
+* Firmware Version 1.0
 ****************************************************************************************/
 
 #ifndef _ASTRONODE_h
