@@ -1,15 +1,14 @@
 /******************************************************************************************
-
   File:        astronode.cpp
   Author:      Raphael Valceschini
   E-mail:      valceschini.r@bluewin.ch
 ******************************************************************************************/
 /****************************************************************************************
 
-  Created on:       01.04.2021
-  Supported Hardware: Arduino MKR 1400
+  Created on:       11.10.2021
+  Supported Hardware: Adafruit Feather M0 Adalogger + Astronode / Feather carrier board
 
-  Firmware Version 1.3
+  Firmware Version 1.0
   First version
 ****************************************************************************************/
 
@@ -17,7 +16,10 @@
 
 uint8_t ASTRONODE::begin(Stream &serialPort)
 {
-  DEBUG_PRINTLN(F("ASTRONODE - Connecting to module"));
+  if ((_printDebug == true) || (_printFullDebug == true))
+  {
+    _debugSerial->println(F("ASTRONODE - Connecting to module"));
+  }
 
   _serialPort = &serialPort;
 
@@ -33,15 +35,37 @@ uint8_t ASTRONODE::begin(Stream &serialPort)
   //Wait for boot to complete
   delay(BOOT_TIME);
 
-  //Send dummy command
+  //Send dummy command (known bug in Astronode S)
   dummy_cmd();
 
-  return ASN_NO_ERROR;
+  //Read module state (meaningful command to know if the terminal works properly)
+  if (read_module_state() == ASN_NO_ERROR)
+  {
+    return ASN_NO_ERROR;
+  }
+
+  return ASN_ERROR_FAILED;
 }
 
 void ASTRONODE::end()
 {
   //Empty
+}
+
+void ASTRONODE::enableDebugging(Stream &debugPort, bool printFullDebug)
+{
+  _debugSerial = &debugPort; //Grab which port the user wants us to use for debugging
+  if (printFullDebug == true)
+  {
+    _printFullDebug = true;
+  }
+  _printDebug = true;
+}
+
+void ASTRONODE::disableDebugging(void)
+{
+  _printDebug = false;
+  _printFullDebug = false;
 }
 
 uint8_t ASTRONODE::configuration_write(bool with_pl_ack,
@@ -51,7 +75,10 @@ uint8_t ASTRONODE::configuration_write(bool with_pl_ack,
                                        bool with_ack_event_pin_mask,
                                        bool with_reset_event_pin_mask)
 {
-  DEBUG_PRINTLN(F("ASTRONODE - Set configuration"));
+  if ((_printDebug == true) || (_printFullDebug == true))
+  {
+    _debugSerial->println(F("ASTRONODE - Set configuration"));
+  }
 
   //Set parameters
   uint8_t param_w[3] = {};
@@ -82,7 +109,10 @@ uint8_t ASTRONODE::configuration_write(bool with_pl_ack,
 
 uint8_t ASTRONODE::configuration_read(void)
 {
-  DEBUG_PRINTLN(F("ASTRONODE - Read configuration"));
+  if ((_printDebug == true) || (_printFullDebug == true))
+  {
+    _debugSerial->println(F("ASTRONODE - Read configuration"));
+  }
 
   //Set parameters
   uint8_t param_a[8] = {};
@@ -112,7 +142,10 @@ uint8_t ASTRONODE::configuration_read(void)
 
 uint8_t ASTRONODE::configuration_save(void)
 {
-  DEBUG_PRINTLN(F("ASTRONODE - Save configuration"));
+  if ((_printDebug == true) || (_printFullDebug == true))
+  {
+    _debugSerial->println(F("ASTRONODE - Save configuration"));
+  }
 
   //Set parameters
   //None
@@ -130,7 +163,10 @@ uint8_t ASTRONODE::configuration_save(void)
 
 uint8_t ASTRONODE::wifi_configuration_write(const char *wland_ssid, const char *wland_key, const char *auth_token)
 {
-  DEBUG_PRINTLN(F("ASTRONODE - Set Wifi configuration"));
+  if ((_printDebug == true) || (_printFullDebug == true))
+  {
+    _debugSerial->println(F("ASTRONODE - Set Wifi configuration"));
+  }
 
   //Set parameters
   uint8_t param_w[194] = {'\0'};
@@ -156,7 +192,10 @@ uint8_t ASTRONODE::wifi_configuration_write(const char *wland_ssid, const char *
 
 uint8_t ASTRONODE::satellite_search_config_write(uint8_t search_period, bool force_search)
 {
-  DEBUG_PRINTLN(F("ASTRONODE - Set satellite search rate"));
+  if ((_printDebug == true) || (_printFullDebug == true))
+  {
+    _debugSerial->println(F("ASTRONODE - Set satellite search rate"));
+  }
 
   //Set parameters
   uint8_t param_w[2] = {};
@@ -179,10 +218,13 @@ uint8_t ASTRONODE::satellite_search_config_write(uint8_t search_period, bool for
 
 uint8_t ASTRONODE::geolocation_write(int32_t lat, int32_t lon)
 {
-  DEBUG_PRINT(F("ASTRONODE - Set geolocation lat:"));
-  DEBUG_PRINT(lat);
-  DEBUG_PRINT(F(", lon:"));
-  DEBUG_PRINTLN(lon);
+  if ((_printDebug == true) || (_printFullDebug == true))
+  {
+    _debugSerial->print(F("ASTRONODE - Set geolocation lat:"));
+    _debugSerial->print(lat);
+    _debugSerial->print(F(", lon:"));
+    _debugSerial->println(lon);
+  }
 
   //Set parameters
   uint8_t param_w[8] = {};
@@ -203,7 +245,10 @@ uint8_t ASTRONODE::geolocation_write(int32_t lat, int32_t lon)
 
 uint8_t ASTRONODE::factory_reset(void)
 {
-  DEBUG_PRINTLN(F("ASTRONODE - Factory reset"));
+  if ((_printDebug == true) || (_printFullDebug == true))
+  {
+    _debugSerial->println(F("ASTRONODE - Factory reset"));
+  }
 
   //Set parameters
   //None
@@ -221,7 +266,10 @@ uint8_t ASTRONODE::factory_reset(void)
 
 uint8_t ASTRONODE::guid_read(String *guid)
 {
-  DEBUG_PRINTLN(F("ASTRONODE - Read GUID"));
+  if ((_printDebug == true) || (_printFullDebug == true))
+  {
+    _debugSerial->println(F("ASTRONODE - Read GUID"));
+  }
 
   //Set parameters
   uint8_t param_a[36] = {};
@@ -243,7 +291,10 @@ uint8_t ASTRONODE::guid_read(String *guid)
 
 uint8_t ASTRONODE::serial_number_read(String *sn)
 {
-  DEBUG_PRINTLN(F("ASTRONODE - Read SN"));
+  if ((_printDebug == true) || (_printFullDebug == true))
+  {
+    _debugSerial->println(F("ASTRONODE - Read SN"));
+  }
 
   //Set parameters
   uint8_t param_a[16] = {};
@@ -265,7 +316,10 @@ uint8_t ASTRONODE::serial_number_read(String *sn)
 
 uint8_t ASTRONODE::product_number_read(String *pn)
 {
-  DEBUG_PRINTLN(F("ASTRONODE - Read PN"));
+  if ((_printDebug == true) || (_printFullDebug == true))
+  {
+    _debugSerial->println(F("ASTRONODE - Read PN"));
+  }
 
   //Set parameters
   uint8_t param_a[16] = {};
@@ -287,7 +341,10 @@ uint8_t ASTRONODE::product_number_read(String *pn)
 
 uint8_t ASTRONODE::rtc_read(uint32_t *time)
 {
-  DEBUG_PRINTLN(F("ASTRONODE - Read RTC"));
+  if ((_printDebug == true) || (_printFullDebug == true))
+  {
+    _debugSerial->println(F("ASTRONODE - Read RTC"));
+  }
 
   //Set parameters
   uint8_t param_a[4] = {};
@@ -299,7 +356,7 @@ uint8_t ASTRONODE::rtc_read(uint32_t *time)
     {
       uint32_t time_tmp = (((uint32_t)param_a[3]) << 24) + (((uint32_t)param_a[2]) << 16) + (((uint32_t)param_a[1]) << 8) + (uint32_t)(param_a[0]);
 
-      *time = time_tmp + 1514764800; //2018-01-01T00:00:00Z (= Astrocast time)
+      *time = time_tmp + ASTROCAST_REF_UNIX_TIME;
 
       return ASN_NO_ERROR;
     }
@@ -309,7 +366,10 @@ uint8_t ASTRONODE::rtc_read(uint32_t *time)
 
 uint8_t ASTRONODE::read_next_contact_opportunity(uint32_t *time_to_next_pass)
 {
-  DEBUG_PRINTLN(F("ASTRONODE - Read next contact opportunity"));
+  if ((_printDebug == true) || (_printFullDebug == true))
+  {
+    _debugSerial->println(F("ASTRONODE - Read next contact opportunity"));
+  }
 
   //Set parameters
   uint8_t param_a[4] = {};
@@ -328,7 +388,10 @@ uint8_t ASTRONODE::read_next_contact_opportunity(uint32_t *time_to_next_pass)
 
 uint8_t ASTRONODE::read_performance_counter(void)
 {
-  DEBUG_PRINTLN(F("ASTRONODE - Read performance counter"));
+  if ((_printDebug == true) || (_printFullDebug == true))
+  {
+    _debugSerial->println(F("ASTRONODE - Read performance counter"));
+  }
 
   //Set parameters
   uint8_t param_a[PER_CMD_LENGTH] = {};
@@ -414,7 +477,10 @@ uint8_t ASTRONODE::read_performance_counter(void)
 
 uint8_t ASTRONODE::save_performance_counter(void)
 {
-  DEBUG_PRINTLN(F("ASTRONODE - Save performance counter"));
+  if ((_printDebug == true) || (_printFullDebug == true))
+  {
+    _debugSerial->println(F("ASTRONODE - Save performance counter"));
+  }
 
   //Set parameters
   //None
@@ -432,7 +498,10 @@ uint8_t ASTRONODE::save_performance_counter(void)
 
 uint8_t ASTRONODE::clear_performance_counter(void)
 {
-  DEBUG_PRINTLN(F("ASTRONODE - Clear performance counter"));
+  if ((_printDebug == true) || (_printFullDebug == true))
+  {
+    _debugSerial->println(F("ASTRONODE - Clear performance counter"));
+  }
 
   //Set parameters
   //None
@@ -450,7 +519,10 @@ uint8_t ASTRONODE::clear_performance_counter(void)
 
 uint8_t ASTRONODE::read_module_state(void)
 {
-  DEBUG_PRINTLN(F("ASTRONODE - Read module state"));
+  if ((_printDebug == true) || (_printFullDebug == true))
+  {
+    _debugSerial->println(F("ASTRONODE - Read module state"));
+  }
 
   //Set parameters
   uint8_t param_a[MST_CMD_LENGTH] = {};
@@ -491,7 +563,10 @@ uint8_t ASTRONODE::read_module_state(void)
 
 uint8_t ASTRONODE::read_environment_details(void)
 {
-  DEBUG_PRINTLN(F("ASTRONODE - Read environment details"));
+  if ((_printDebug == true) || (_printFullDebug == true))
+  {
+    _debugSerial->println(F("ASTRONODE - Read environment details"));
+  }
 
   //Set parameters
   uint8_t param_a[END_CMD_LENGTH] = {};
@@ -532,7 +607,10 @@ uint8_t ASTRONODE::read_environment_details(void)
 
 uint8_t ASTRONODE::read_last_contact_details(void)
 {
-  DEBUG_PRINTLN(F("ASTRONODE - Read last contact details"));
+  if ((_printDebug == true) || (_printFullDebug == true))
+  {
+    _debugSerial->println(F("ASTRONODE - Read last contact details"));
+  }
 
   //Set parameters
   uint8_t param_a[LCD_CMD_LENGTH] = {};
@@ -577,39 +655,50 @@ uint8_t ASTRONODE::read_last_contact_details(void)
 
 uint8_t ASTRONODE::enqueue_payload(uint8_t *data, uint8_t length, uint16_t id)
 {
-  DEBUG_PRINT(F("ASTRONODE - Enqueue payload:"));
-  DEBUG_PRINT(length);
-  DEBUG_PRINT(F("[B] with id "));
-  DEBUG_PRINTLN(id);
-
-  //Set parameters
-  uint8_t param_w[160 + 2] = {};
-  uint8_t param_a[2] = {};
-
-  param_w[0] = (uint8_t)id;
-  param_w[1] = (uint8_t)(id >> 8);
-  memcpy(&param_w[2], data, length);
-
-  //Send request
-  if (encode_send_request(PLD_ER, param_w, length + 2) == ASN_NO_ERROR)
+  if ((_printDebug == true) || (_printFullDebug == true))
   {
-    if (receive_decode_answer(param_a, sizeof(param_a)) == PLD_EA)
+    _debugSerial->print(F("ASTRONODE - Enqueue payload:"));
+    _debugSerial->print(length);
+    _debugSerial->print(F("[B] with id "));
+    _debugSerial->println(id);
+  }
+
+  if (length < ASN_MAX_MSG_SIZE)
+  {
+    //Set parameters
+    uint8_t param_w[160 + 2] = {};
+    uint8_t param_a[2] = {};
+
+    param_w[0] = (uint8_t)id;
+    param_w[1] = (uint8_t)(id >> 8);
+
+    memcpy(&param_w[2], data, length);
+
+    //Send request
+    if (encode_send_request(PLD_ER, param_w, length + 2) == ASN_NO_ERROR)
     {
-      //Check that enqueued payload has the correct ID
-      uint16_t id_check = (((uint16_t)param_a[1]) << 8) + ((uint16_t)param_a[0]);
-      if (id == id_check)
+      if (receive_decode_answer(param_a, sizeof(param_a)) == PLD_EA)
       {
-        return ASN_NO_ERROR;
+        //Check that enqueued payload has the correct ID
+        uint16_t id_check = (((uint16_t)param_a[1]) << 8) + ((uint16_t)param_a[0]);
+        if (id == id_check)
+        {
+          return ASN_NO_ERROR;
+        }
       }
     }
   }
+
   return ASN_ERROR_FAILED;
 }
 
 uint8_t ASTRONODE::dequeue_payload(uint16_t *id)
 {
-  DEBUG_PRINT(F("ASTRONODE - Dequeue payload with id:"));
-  DEBUG_PRINTLN(*id);
+  if ((_printDebug == true) || (_printFullDebug == true))
+  {
+    _debugSerial->print(F("ASTRONODE - Dequeue payload with id:"));
+    _debugSerial->println(*id);
+  }
 
   //Set parameters
   uint8_t param_a[2] = {};
@@ -629,7 +718,10 @@ uint8_t ASTRONODE::dequeue_payload(uint16_t *id)
 
 uint8_t ASTRONODE::clear_free_payloads(void)
 {
-  DEBUG_PRINTLN(F("ASTRONODE - Clear all payloads"));
+  if ((_printDebug == true) || (_printFullDebug == true))
+  {
+    _debugSerial->println(F("ASTRONODE - Clear all payloads"));
+  }
 
   //Set parameters
   //None
@@ -647,7 +739,10 @@ uint8_t ASTRONODE::clear_free_payloads(void)
 
 uint8_t ASTRONODE::event_read(uint8_t *event_type)
 {
-  DEBUG_PRINTLN(F("ASTRONODE - Read event"));
+  if ((_printDebug == true) || (_printFullDebug == true))
+  {
+    _debugSerial->println(F("ASTRONODE - Read event"));
+  }
 
   //Set parameters
   uint8_t param_a;
@@ -685,8 +780,11 @@ uint8_t ASTRONODE::event_read(uint8_t *event_type)
 
 uint8_t ASTRONODE::read_satellite_ack(uint16_t *id)
 {
-  DEBUG_PRINT(F("ASTRONODE - Read satellite ack for id "));
-  DEBUG_PRINTLN(*id);
+  if ((_printDebug == true) || (_printFullDebug == true))
+  {
+    _debugSerial->print(F("ASTRONODE - Read satellite ack for id "));
+    _debugSerial->println(*id);
+  }
 
   //Set parameters
   uint8_t param_a[2] = {};
@@ -706,7 +804,10 @@ uint8_t ASTRONODE::read_satellite_ack(uint16_t *id)
 
 uint8_t ASTRONODE::clear_satellite_ack(void)
 {
-  DEBUG_PRINTLN(F("ASTRONODE - Clear satellite ack event"));
+  if ((_printDebug == true) || (_printFullDebug == true))
+  {
+    _debugSerial->println(F("ASTRONODE - Clear satellite ack event"));
+  }
 
   //Set parameters
   //None
@@ -724,7 +825,10 @@ uint8_t ASTRONODE::clear_satellite_ack(void)
 
 uint8_t ASTRONODE::clear_reset_event(void)
 {
-  DEBUG_PRINTLN(F("ASTRONODE - Clear reset event"));
+  if ((_printDebug == true) || (_printFullDebug == true))
+  {
+    _debugSerial->println(F("ASTRONODE - Clear reset event"));
+  }
 
   //Set parameters
   //None
@@ -742,7 +846,10 @@ uint8_t ASTRONODE::clear_reset_event(void)
 
 void ASTRONODE::dummy_cmd(void)
 {
-  DEBUG_PRINTLN(F("ASTRONODE - Dummy command (will return error code)"));
+  if ((_printDebug == true) || (_printFullDebug == true))
+  {
+    _debugSerial->println(F("ASTRONODE - Dummy command (will return error code)"));
+  }
 
   encode_send_request(0x00, NULL, 0);
   receive_decode_answer(NULL, 0);
@@ -769,8 +876,11 @@ uint8_t ASTRONODE::encode_send_request(uint8_t reg, uint8_t *param, uint8_t para
   memcpy(&com_buf_astronode[index_buf_cmd], &cmd_crc, sizeof(cmd_crc));
   index_buf_cmd += sizeof(cmd_crc);
 
-  //DEBUG_PRINTLN(F("asset -> terminal (+ CRC): "));
-  //print_array_to_hex(com_buf_astronode, index_buf_cmd);
+  if ((_printDebug == true) && (_printFullDebug == true))
+  {
+    _debugSerial->println(F("asset -> terminal (+ CRC): "));
+    print_array_to_hex(com_buf_astronode, index_buf_cmd);
+  }
 
   //Add escape characters
   com_buf_astronode_hex[index_buf_cmd_hex++] = STX;
@@ -782,8 +892,11 @@ uint8_t ASTRONODE::encode_send_request(uint8_t reg, uint8_t *param, uint8_t para
   //Add escape characters
   com_buf_astronode_hex[index_buf_cmd_hex++] = ETX;
 
-  //DEBUG_PRINTLN(F("asset -> terminal (+ CRC + HEX encoding): "));
-  //print_array_to_hex(com_buf_astronode_hex, index_buf_cmd_hex);
+  if ((_printDebug == true) && (_printFullDebug == true))
+  {
+    _debugSerial->println(F("asset -> terminal (+ CRC + HEX encoding): "));
+    print_array_to_hex(com_buf_astronode_hex, index_buf_cmd_hex);
+  }
 
   //Write command
   if (_serialPort->write(com_buf_astronode_hex, index_buf_cmd_hex) == (size_t)(index_buf_cmd_hex))
@@ -800,15 +913,20 @@ uint16_t ASTRONODE::receive_decode_answer(uint8_t *param, uint8_t param_length)
 
   if (rx_length > 6) //At least STX (1), ETX (1), CRC (4)
   {
-
-    //DEBUG_PRINTLN(F("terminal -> asset (+ CRC + HEX encoding): "));
-    //print_array_to_hex(com_buf_astronode_hex, rx_length);
+    if ((_printDebug == true) && (_printFullDebug == true))
+    {
+      _debugSerial->println(F("terminal -> asset (+ CRC + HEX encoding): "));
+      print_array_to_hex(com_buf_astronode_hex, rx_length);
+    }
 
     //Translate to binary
     hex_array_to_byte_array(&com_buf_astronode_hex[1], rx_length, com_buf_astronode); // Skip STX, ETX not in buffer
 
-    //DEBUG_PRINTLN(F("terminal -> asset (+ CRC): "));
-    //print_array_to_hex(com_buf_astronode, rx_length >> 1);
+    if ((_printDebug == true) && (_printFullDebug == true))
+    {
+      _debugSerial->println(F("terminal -> asset (+ CRC): "));
+      print_array_to_hex(com_buf_astronode, rx_length >> 1);
+    }
 
     //Verify CRC
     uint16_t msg_length = (rx_length >> 1) - 2; //Divid by 2 and remove CRC (2 bytes)
@@ -834,67 +952,76 @@ uint16_t ASTRONODE::receive_decode_answer(uint8_t *param, uint8_t param_length)
     }
     else
     {
-      DEBUG_PRINTLN(F("ASTRONODE - Failed to check CRC - frame is not valid"));
+      if ((_printDebug == true) || (_printFullDebug == true))
+      {
+        _debugSerial->println(F("ASTRONODE - Failed to check CRC - frame is not valid"));
+      }
     }
   }
   else
   {
-    DEBUG_PRINTLN(F("ASTRONODE - Failed to receive data from astronode before timeout"));
+    if ((_printDebug == true) || (_printFullDebug == true))
+    {
+      _debugSerial->println(F("ASTRONODE - Failed to receive data from astronode before timeout"));
+    }
   }
   return ASN_ERROR_FAILED;
 }
 
 void ASTRONODE::print_error_code(uint16_t code)
 {
-  switch (code)
+  if ((_printDebug == true) || (_printFullDebug == true))
   {
-  case CRC_NOT_VALID:
-    DEBUG_PRINTLN(F("ASTRONODE - Discrepancy between provided CRC and expected CRC."));
-    break;
-  case LENGTH_NOT_VALID:
-    DEBUG_PRINTLN(F("ASTRONODE - Message exceeds the maximum length for a frame."));
-    break;
-  case OPCODE_NOT_VALID:
-    DEBUG_PRINTLN(F("ASTRONODE - Invalid Operation Code used."));
-    break;
-  case FORMAT_NOT_VALID:
-    DEBUG_PRINTLN(F("ASTRONODE - At least one of the fields (SSID, password, token) is not composed of exclusively printable standard ASCII characters (0x20 to 0x7E)."));
-    break;
-  case FLASH_WRITING_FAILED:
-    DEBUG_PRINTLN(F("ASTRONODE - Failed to write the Wi-Fi settings (SSID, password, token) to the flash."));
-    break;
-  case PERIOD_INVALID:
-    DEBUG_PRINTLN(F("ASTRONODE - The Satellite Search Config period enumeration value is not valid."));
-    break;
-  case BUFFER_FULL:
-    DEBUG_PRINTLN(F("ASTRONODE - Failed to queue the payload because the sending queue is already full."));
-    break;
-  case DUPLICATE_ID:
-    DEBUG_PRINTLN(F("ASTRONODE - Failed to queue the payload because the Payload ID provided by the asset is already in use in the terminal queue."));
-    break;
-  case BUFFER_EMPTY:
-    DEBUG_PRINTLN(F("ASTRONODE - Failed to dequeue a payload from the buffer because the buffer is empty."));
-    break;
-  case INVALID_POS:
-    DEBUG_PRINTLN(F("ASTRONODE - Invalid position."));
-    break;
-  case NO_ACK:
-    DEBUG_PRINTLN(F("ASTRONODE - No satellite acknowledgement available for any payload."));
-    break;
-  case NO_CLEAR:
-    DEBUG_PRINTLN(F("ASTRONODE - No payload ack to clear, or it was already cleared."));
-    break;
-  case NO_COMMAND:
-    DEBUG_PRINTLN(F("ASTRONODE - No command is available."));
-    break;
-  case NO_COMMAND_CLEAR:
-    DEBUG_PRINTLN(F("ASTRONODE - No command to clear, or it was already cleared."));
-    break;
-  default:
-  {
-    DEBUG_PRINT(F("ASTRONODE - Unknown error code: "));
-    DEBUG_PRINTHEX(code);
-  }
+    switch (code)
+    {
+    case CRC_NOT_VALID:
+      _debugSerial->println(F("ASTRONODE - Discrepancy between provided CRC and expected CRC."));
+      break;
+    case LENGTH_NOT_VALID:
+      _debugSerial->println(F("ASTRONODE - Message exceeds the maximum length for a frame."));
+      break;
+    case OPCODE_NOT_VALID:
+      _debugSerial->println(F("ASTRONODE - Invalid Operation Code used."));
+      break;
+    case FORMAT_NOT_VALID:
+      _debugSerial->println(F("ASTRONODE - At least one of the fields (SSID, password, token) is not composed of exclusively printable standard ASCII characters (0x20 to 0x7E)."));
+      break;
+    case FLASH_WRITING_FAILED:
+      _debugSerial->println(F("ASTRONODE - Failed to write the Wi-Fi settings (SSID, password, token) to the flash."));
+      break;
+    case PERIOD_INVALID:
+      _debugSerial->println(F("ASTRONODE - The Satellite Search Config period enumeration value is not valid."));
+      break;
+    case BUFFER_FULL:
+      _debugSerial->println(F("ASTRONODE - Failed to queue the payload because the sending queue is already full."));
+      break;
+    case DUPLICATE_ID:
+      _debugSerial->println(F("ASTRONODE - Failed to queue the payload because the Payload ID provided by the asset is already in use in the terminal queue."));
+      break;
+    case BUFFER_EMPTY:
+      _debugSerial->println(F("ASTRONODE - Failed to dequeue a payload from the buffer because the buffer is empty."));
+      break;
+    case INVALID_POS:
+      _debugSerial->println(F("ASTRONODE - Invalid position."));
+      break;
+    case NO_ACK:
+      _debugSerial->println(F("ASTRONODE - No satellite acknowledgement available for any payload."));
+      break;
+    case NO_CLEAR:
+      _debugSerial->println(F("ASTRONODE - No payload ack to clear, or it was already cleared."));
+      break;
+    case NO_COMMAND:
+      _debugSerial->println(F("ASTRONODE - No command is available."));
+      break;
+    case NO_COMMAND_CLEAR:
+      _debugSerial->println(F("ASTRONODE - No command to clear, or it was already cleared."));
+      break;
+    default:
+    {
+      _debugSerial->print(F("ASTRONODE - Unknown error code: "));
+      _debugSerial->println(code);
+    }
+    }
   }
 }
 
@@ -961,23 +1088,23 @@ uint8_t ASTRONODE::hex_to_nibble(uint8_t hex)
 
 void ASTRONODE::print_array_to_hex(uint8_t data[], size_t length)
 {
-  Serial.println("uint8_t message[] = {");
+  _debugSerial->println("uint8_t message[] = {");
   for (size_t i = 0; i < length; i++)
   {
-    Serial.print("0x");
+    _debugSerial->print("0x");
     if ((data[i] >> 4) == 0)
     {
-      Serial.print("0"); // print preceeding high nibble if it's zero
+      _debugSerial->print("0"); // print preceeding high nibble if it's zero
     }
-    Serial.print(data[i], HEX);
+    _debugSerial->print(data[i], HEX);
     if (i < (length - 1))
     {
-      Serial.print(", ");
+      _debugSerial->print(", ");
     }
     if ((31 - i) % 16 == 0)
     {
-      Serial.println();
+      _debugSerial->println();
     }
   }
-  Serial.println("};\n\r");
+  _debugSerial->println("};\n\r");
 }

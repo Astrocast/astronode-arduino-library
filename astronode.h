@@ -1,15 +1,14 @@
 ﻿/******************************************************************************************
-
   File:        astronode.h
   Author:      Raphael Valceschini
   E-mail:      valceschini.r@bluewin.ch
 ******************************************************************************************/
 /****************************************************************************************
 
-  Created on:       01.04.2021
-  Supported Hardware: Arduino MKR 1400
+  Created on:       11.10.2021
+  Supported Hardware: Adafruit Feather M0 Adalogger + Astronode / Feather carrier board
 
-  Firmware Version 1.3
+  Firmware Version 1.0
   First version
 ****************************************************************************************/
 
@@ -20,19 +19,6 @@
 #include "arduino.h"
 #else
 #include "WProgram.h"
-#endif
-
-//Debug output
-//#define DEBUG
-
-#ifdef DEBUG
-#define DEBUG_PRINT(x) Serial.print(x)
-#define DEBUG_PRINTHEX(x) Serial.print(x, HEX)
-#define DEBUG_PRINTLN(x) Serial.println(x)
-#else
-#define DEBUG_PRINT(x)
-#define DEBUG_PRINTHEX(x)
-#define DEBUG_PRINTLN(x)
 #endif
 
 //Timeout
@@ -122,6 +108,10 @@
 //Command/Response size
 #define COMMAND_MAX_SIZE 200
 
+//Message queue description
+#define ASN_MAX_MSG_SIZE 160
+#define ASN_MSG_QUEUE_SIZE 8
+
 //Functions return codes
 #define ASN_NO_ERROR 0x00
 #define ASN_ERROR_FAILED 0x01
@@ -182,12 +172,19 @@
 #define TYPE_ASTRONODE_S 3
 #define TYPE_WIFI_DEVKIT 4
 
+//Astrocast time
+#define ASTROCAST_REF_UNIX_TIME 1514764800 //2018-01-01T00:00:00Z (= Astrocast time)
+
 class ASTRONODE
 {
 
 private:
   //Global variables
   Stream *_serialPort;
+  Stream *_debugSerial; //The stream to send debug messages to if enabled
+
+  bool _printDebug = false;     //Flag to print the serial commands we are sending to the Serial port for debug
+  bool _printFullDebug = false; //Flag to print full debug messages. Useful for UART debugging
 
   uint8_t com_buf_astronode[COMMAND_MAX_SIZE + 2];               //max cmd size + 2 bytes CRC
   uint8_t com_buf_astronode_hex[2 * (COMMAND_MAX_SIZE + 2) + 2]; //max cmd size + 2 bytes CRC -> double for trasport layer + add 2 escape characters
@@ -268,6 +265,9 @@ public:
   //Functions prototype
   uint8_t begin(Stream &serialPort);
   void end();
+
+  void enableDebugging(Stream &debugPort, bool printFullDebug);
+  void disableDebugging(void);
 
   uint8_t configuration_write(bool with_pl_ack,
                               bool with_geoloc,
