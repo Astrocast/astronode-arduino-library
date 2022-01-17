@@ -89,17 +89,20 @@
 #define CRC_NOT_VALID 0x0001        //Discrepancy between provided CRC and expected CRC.
 #define LENGTH_NOT_VALID 0x0011     //Message exceeds the maximum length for a frame.
 #define OPCODE_NOT_VALID 0x0121     //Invalid Operation Code used.
+#define ARG_NOT_VALID 0x0122        //Invalid argument used.
+#define FLASH_WRITING_FAILED 0x0123 //Failed to write to the flash.
+#define DEVICE_BUSY 0x0124          //Device is busy.
 #define FORMAT_NOT_VALID 0x0601     //At least one of the fields (SSID, password, token) is not composed of exclusively printable standard ASCII characters (0x20 to 0x7E).
-#define FLASH_WRITING_FAILED 0x0611 //Failed to write the Wi-Fi settings (SSID, password, token) to the flash
 #define PERIOD_INVALID 0x0701       //The Satellite Search Config period enumeration value is not valid
 #define BUFFER_FULL 0x2501          //Failed to queue the payload because the sending queue is already full
 #define DUPLICATE_ID 0x2511         //Failed to queue the payload because the Payload ID provided by the asset is already in use in the terminal queue.
 #define BUFFER_EMPTY 0x2601         //Failed to dequeue a payload from the buffer because the buffer is empty
 #define INVALID_POS 0x3501          //Failed to update the geolocation information. Latitude and longitude fields must in the range [-90,90] degrees and [-180,180] degrees, respectively.
 #define NO_ACK 0x4501               //No satellite acknowledgement available for any payload.
-#define NO_CLEAR 0x4601             //No payload ack to clear, or it was already cleared.
-#define NO_COMMAND 0x4702           //No command is available.
+#define NO_ACK_CLEAR 0x4601             //No payload ack to clear, or it was already cleared.
+#define NO_COMMAND 0x4701           //No command is available.
 #define NO_COMMAND_CLEAR 0x4801     //No command to clear, or it was already cleared.
+#define MAX_TX_REACHED 0x6101       //Failed to test Tx due to the maximum number of transmissions being reached.
 
 //Escape characters
 #define STX 0x02
@@ -301,8 +304,13 @@ public:
   uint8_t dequeue_payload(uint16_t *id);
   uint8_t clear_free_payloads(void);
 
+  uint8_t read_command_8B(uint8_t data[8], uint32_t *createdDate);
+  uint8_t read_command_40B(uint8_t data[40], uint32_t *createdDate);
+  uint8_t clear_command(void);
+
   uint8_t event_read(uint8_t *event_type);
   uint8_t read_satellite_ack(uint16_t *id);
+
   uint8_t clear_satellite_ack(void);
   uint8_t clear_reset_event(void);
 

@@ -38,13 +38,11 @@ uint8_t ASTRONODE::begin(Stream &serialPort)
   //Send dummy command (known bug in Astronode S)
   dummy_cmd();
 
-  //Read module state (meaningful command to know if the terminal works properly)
-  if (read_module_state() == ASN_NO_ERROR)
-  {
-    return ASN_NO_ERROR;
-  }
+  //Read module state
+  if (read_module_state() != ASN_NO_ERROR)
+    return ASN_ERROR_FAILED;
 
-  return ASN_ERROR_FAILED;
+  return ASN_NO_ERROR;
 }
 
 void ASTRONODE::end()
@@ -844,6 +842,75 @@ uint8_t ASTRONODE::clear_reset_event(void)
   return ASN_ERROR_FAILED;
 }
 
+uint8_t ASTRONODE::read_command_8B(uint8_t data[8], uint32_t *createdDate)
+{
+  if ((_printDebug == true) || (_printFullDebug == true))
+  {
+    _debugSerial->println(F("ASTRONODE - Read command"));
+  }
+
+  //Set parameters
+  uint8_t param_a[12] = {};
+
+  //Send request
+  if (encode_send_request(CMD_RR, NULL, 0) == ASN_NO_ERROR)
+  {
+    if (receive_decode_answer(param_a, sizeof(param_a)) == CMD_RA)
+    {
+      *createdDate = (((uint32_t)param_a[3]) << 24) + (((uint32_t)param_a[2]) << 16) + (((uint32_t)param_a[1]) << 8) + (uint32_t)(param_a[0]);
+      memcpy(data, &param_a[4], 8);
+
+      return ASN_NO_ERROR;
+    }
+  }
+  return ASN_ERROR_FAILED;
+}
+
+uint8_t ASTRONODE::read_command_40B(uint8_t data[40], uint32_t *createdDate)
+{
+  if ((_printDebug == true) || (_printFullDebug == true))
+  {
+    _debugSerial->println(F("ASTRONODE - Read command"));
+  }
+
+  //Set parameters
+  uint8_t param_a[44] = {};
+
+  //Send request
+  if (encode_send_request(CMD_RR, NULL, 0) == ASN_NO_ERROR)
+  {
+    if (receive_decode_answer(param_a, sizeof(param_a)) == CMD_RA)
+    {
+      *createdDate = (((uint32_t)param_a[3]) << 24) + (((uint32_t)param_a[2]) << 16) + (((uint32_t)param_a[1]) << 8) + (uint32_t)(param_a[0]);
+      memcpy(data, &param_a[4], 40);
+
+      return ASN_NO_ERROR;
+    }
+  }
+  return ASN_ERROR_FAILED;
+}
+
+uint8_t ASTRONODE::clear_command(void)
+{
+  if ((_printDebug == true) || (_printFullDebug == true))
+  {
+    _debugSerial->println(F("ASTRONODE - Clear command"));
+  }
+
+  //Set parameters
+  //None
+
+  //Send request
+  if (encode_send_request(CMD_CR, NULL, 0) == ASN_NO_ERROR)
+  {
+    if (receive_decode_answer(NULL, 0) == CMD_CA)
+    {
+      return ASN_NO_ERROR;
+    }
+  }
+  return ASN_ERROR_FAILED;
+}
+
 void ASTRONODE::dummy_cmd(void)
 {
   if ((_printDebug == true) || (_printFullDebug == true))
@@ -983,11 +1050,17 @@ void ASTRONODE::print_error_code(uint16_t code)
     case OPCODE_NOT_VALID:
       _debugSerial->println(F("ASTRONODE - Invalid Operation Code used."));
       break;
-    case FORMAT_NOT_VALID:
-      _debugSerial->println(F("ASTRONODE - At least one of the fields (SSID, password, token) is not composed of exclusively printable standard ASCII characters (0x20 to 0x7E)."));
+    case ARG_NOT_VALID:
+      _debugSerial->println(F("ASTRONODE - Invalid argument used."));
       break;
     case FLASH_WRITING_FAILED:
-      _debugSerial->println(F("ASTRONODE - Failed to write the Wi-Fi settings (SSID, password, token) to the flash."));
+      _debugSerial->println(F("ASTRONODE - Failed to write to the flash."));
+      break;
+    case DEVICE_BUSY:
+      _debugSerial->println(F("ASTRONODE - Device is busy."));
+      break;
+    case FORMAT_NOT_VALID:
+      _debugSerial->println(F("ASTRONODE - At least one of the fields (SSID, password, token) is not composed of exclusively printable standard ASCII characters (0x20 to 0x7E)."));
       break;
     case PERIOD_INVALID:
       _debugSerial->println(F("ASTRONODE - The Satellite Search Config period enumeration value is not valid."));
@@ -1007,7 +1080,7 @@ void ASTRONODE::print_error_code(uint16_t code)
     case NO_ACK:
       _debugSerial->println(F("ASTRONODE - No satellite acknowledgement available for any payload."));
       break;
-    case NO_CLEAR:
+    case NO_ACK_CLEAR:
       _debugSerial->println(F("ASTRONODE - No payload ack to clear, or it was already cleared."));
       break;
     case NO_COMMAND:
@@ -1015,6 +1088,9 @@ void ASTRONODE::print_error_code(uint16_t code)
       break;
     case NO_COMMAND_CLEAR:
       _debugSerial->println(F("ASTRONODE - No command to clear, or it was already cleared."));
+      break;
+    case MAX_TX_REACHED:
+      _debugSerial->println(F("ASTRONODE - Failed to test Tx due to the maximum number of transmissions being reached."));
       break;
     default:
     {
