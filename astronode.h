@@ -99,7 +99,7 @@
 #define BUFFER_EMPTY 0x2601         //Failed to dequeue a payload from the buffer because the buffer is empty
 #define INVALID_POS 0x3501          //Failed to update the geolocation information. Latitude and longitude fields must in the range [-90,90] degrees and [-180,180] degrees, respectively.
 #define NO_ACK 0x4501               //No satellite acknowledgement available for any payload.
-#define NO_ACK_CLEAR 0x4601             //No payload ack to clear, or it was already cleared.
+#define NO_ACK_CLEAR 0x4601         //No payload ack to clear, or it was already cleared.
 #define NO_COMMAND 0x4701           //No command is available.
 #define NO_COMMAND_CLEAR 0x4801     //No command to clear, or it was already cleared.
 #define MAX_TX_REACHED 0x6101       //Failed to test Tx due to the maximum number of transmissions being reached.
@@ -168,7 +168,7 @@
 #define EVENT_MSG_ACK 1      // A satellite payload acknowledgement is available to be read and confirmed
 #define EVENT_RESET 2        // Module has reset
 #define EVENT_CMD_RECEIVED 3 // A command is available to be read and confirmed
-#define EVENT_CMD_ACK 4      // A command acknowledgement is present in the message queue, waiting to be sent
+#define EVENT_MSG_PENDING 4  // An uplink message is present in the message queue, waiting to be sent, and module power should not be cut.
 #define EVENT_NO_EVENT 0
 
 //Device type
