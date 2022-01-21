@@ -764,7 +764,7 @@ uint8_t ASTRONODE::event_read(uint8_t *event_type)
       }
       else if (param_a & (1 << 3))
       {
-        *event_type = EVENT_CMD_ACK;
+        *event_type = EVENT_MSG_PENDING;
       }
       else
       {
