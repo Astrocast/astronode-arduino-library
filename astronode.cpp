@@ -857,7 +857,10 @@ uint8_t ASTRONODE::read_command_8B(uint8_t data[8], uint32_t *createdDate)
   {
     if (receive_decode_answer(param_a, sizeof(param_a)) == CMD_RA)
     {
-      *createdDate = (((uint32_t)param_a[3]) << 24) + (((uint32_t)param_a[2]) << 16) + (((uint32_t)param_a[1]) << 8) + (uint32_t)(param_a[0]);
+      uint32_t time_tmp = (((uint32_t)param_a[3]) << 24) + (((uint32_t)param_a[2]) << 16) + (((uint32_t)param_a[1]) << 8) + (uint32_t)(param_a[0]);
+	  
+      *createdDate = time_tmp + ASTROCAST_REF_UNIX_TIME;
+	  
       memcpy(data, &param_a[4], 8);
 
       return ASN_NO_ERROR;
@@ -881,7 +884,10 @@ uint8_t ASTRONODE::read_command_40B(uint8_t data[40], uint32_t *createdDate)
   {
     if (receive_decode_answer(param_a, sizeof(param_a)) == CMD_RA)
     {
-      *createdDate = (((uint32_t)param_a[3]) << 24) + (((uint32_t)param_a[2]) << 16) + (((uint32_t)param_a[1]) << 8) + (uint32_t)(param_a[0]);
+      uint32_t time_tmp = (((uint32_t)param_a[3]) << 24) + (((uint32_t)param_a[2]) << 16) + (((uint32_t)param_a[1]) << 8) + (uint32_t)(param_a[0]);
+	  
+      *createdDate = time_tmp + ASTROCAST_REF_UNIX_TIME;
+	  
       memcpy(data, &param_a[4], 40);
 
       return ASN_NO_ERROR;
