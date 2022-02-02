@@ -1,7 +1,7 @@
 /*
-  This example enqueue a single message in the Astronode S terminal.
+  This example enqueue a single message in the queue of the Astronode S.
   It checks periodically if a new event is available.
-  If a SAK event is receieved, a new message is enqueued.
+  If a "satellite acknowledge" event is receieved, a new message is enqueued in the module.
 
   The circuit:
   - Nucleo-64 STM32l476 (TX -> D2(PA10), RX -> D8(PA9), GND -> GND, 3V3 -> 3V3)

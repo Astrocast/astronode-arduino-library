@@ -399,7 +399,7 @@ uint8_t ASTRONODE::read_performance_counter(void)
   {
     if (receive_decode_answer(param_a, sizeof(param_a)) == PER_RA)
     {
-      uint8_t i = 0, k = 0;
+      uint8_t i = 0;
       do
       {
         uint8_t type = param_a[i++];
@@ -464,8 +464,7 @@ uint8_t ASTRONODE::read_performance_counter(void)
           break;
         }
         i += length;
-        k++;
-      } while ((i + 2 < PER_CMD_LENGTH) && (k < PER_CMD_LENGTH));
+      } while (i < PER_CMD_LENGTH);
 
       return ASN_NO_ERROR;
     }
@@ -530,7 +529,7 @@ uint8_t ASTRONODE::read_module_state(void)
   {
     if (receive_decode_answer(param_a, sizeof(param_a)) == MST_RA)
     {
-      uint8_t i = 0, k = 0;
+      uint8_t i = 0;
       do
       {
         uint8_t type = param_a[i++];
@@ -549,9 +548,13 @@ uint8_t ASTRONODE::read_module_state(void)
           if (length == sizeof(mst_struct.last_rst))
             memcpy(&mst_struct.last_rst, &param_a[i], length);
           break;
+        case MST_UPTIME:
+          if (length == sizeof(mst_struct.uptime))
+            memcpy(&mst_struct.uptime, &param_a[i], length);
+          break;
         }
         i += length;
-      } while ((i + 2 < MST_CMD_LENGTH) && (k < MST_CMD_LENGTH));
+      } while (i < MST_CMD_LENGTH);
 
       return ASN_NO_ERROR;
     }
@@ -574,7 +577,7 @@ uint8_t ASTRONODE::read_environment_details(void)
   {
     if (receive_decode_answer(param_a, sizeof(param_a)) == END_RA)
     {
-      uint8_t i = 0, k = 0;
+      uint8_t i = 0;
       do
       {
         uint8_t type = param_a[i++];
@@ -595,7 +598,7 @@ uint8_t ASTRONODE::read_environment_details(void)
           break;
         }
         i += length;
-      } while ((i + 2 < END_CMD_LENGTH) && (k < END_CMD_LENGTH));
+      } while (i < END_CMD_LENGTH);
 
       return ASN_NO_ERROR;
     }
@@ -618,7 +621,7 @@ uint8_t ASTRONODE::read_last_contact_details(void)
   {
     if (receive_decode_answer(param_a, sizeof(param_a)) == LCD_RA)
     {
-      uint8_t i = 0, k = 0;
+      uint8_t i = 0;
       do
       {
         uint8_t type = param_a[i++];
@@ -643,7 +646,7 @@ uint8_t ASTRONODE::read_last_contact_details(void)
           break;
         }
         i += length;
-      } while ((i + 2 < LCD_CMD_LENGTH) && (k < LCD_CMD_LENGTH));
+      } while (i < LCD_CMD_LENGTH);
 
       return ASN_NO_ERROR;
     }
@@ -858,9 +861,9 @@ uint8_t ASTRONODE::read_command_8B(uint8_t data[8], uint32_t *createdDate)
     if (receive_decode_answer(param_a, sizeof(param_a)) == CMD_RA)
     {
       uint32_t time_tmp = (((uint32_t)param_a[3]) << 24) + (((uint32_t)param_a[2]) << 16) + (((uint32_t)param_a[1]) << 8) + (uint32_t)(param_a[0]);
-	  
+
       *createdDate = time_tmp + ASTROCAST_REF_UNIX_TIME;
-	  
+
       memcpy(data, &param_a[4], 8);
 
       return ASN_NO_ERROR;
@@ -885,9 +888,9 @@ uint8_t ASTRONODE::read_command_40B(uint8_t data[40], uint32_t *createdDate)
     if (receive_decode_answer(param_a, sizeof(param_a)) == CMD_RA)
     {
       uint32_t time_tmp = (((uint32_t)param_a[3]) << 24) + (((uint32_t)param_a[2]) << 16) + (((uint32_t)param_a[1]) << 8) + (uint32_t)(param_a[0]);
-	  
+
       *createdDate = time_tmp + ASTROCAST_REF_UNIX_TIME;
-	  
+
       memcpy(data, &param_a[4], 40);
 
       return ASN_NO_ERROR;

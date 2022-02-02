@@ -129,7 +129,7 @@
 #define SAT_SEARCH_23414_MS 6
 
 //Performance counter types
-#define PER_CMD_LENGTH 90
+#define PER_CMD_LENGTH 84
 #define PER_TYPE_SAT_SEARCH_PHASE_CNT 0x01
 #define PER_TYPE_SAT_DETECT_OPERATION_CNT 0x02
 #define PER_TYPE_SIGNAL_DEMOD_PHASE_CNT 0x03
@@ -146,10 +146,11 @@
 #define PER_TYPE_CMD_DEMOD_SUCCESS_CNT 0x0E
 
 //Module state types
-#define MST_CMD_LENGTH 9
+#define MST_CMD_LENGTH 15
 #define MST_TYPE_MSG_IN_QUEUE 0x41
 #define MST_TYPE_ACK_MSG_QUEUE 0x42
 #define MST_TYPE_LAST_RST 0x43
+#define MST_UPTIME 0x44
 
 //Environment details
 #define END_CMD_LENGTH 12
@@ -245,6 +246,7 @@ public:
     uint8_t msg_in_queue;
     uint8_t ack_msg_in_queue;
     uint8_t last_rst;
+    uint32_t uptime;
   } ASTRONODE_MST_STRUCT;
   ASTRONODE_MST_STRUCT mst_struct;
 
