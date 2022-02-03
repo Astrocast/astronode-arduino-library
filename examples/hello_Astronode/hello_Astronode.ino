@@ -47,8 +47,11 @@ ASTRONODE astronode;
 
 void setup()
 {
-  Serial.begin(115200);
+  Serial.begin(9600);
   while (!Serial);
+  
+  //Enable debugging messages on Astronode S library
+  astronode.enableDebugging(Serial, false);
 
   ASTRONODE_SERIAL.begin(ASTRONODE_SERIAL_BAUDRATE);
 
