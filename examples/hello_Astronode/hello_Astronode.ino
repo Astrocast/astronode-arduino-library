@@ -94,7 +94,7 @@ void setup()
   astronode.clear_free_payloads();
   
   //Try enqueueing a first message in the queue
-  if (astronode.enqueue_payload(data, sizeof(data), counter) == ASN_NO_ERROR) {
+  if (astronode.enqueue_payload(data, sizeof(data), counter) == ANS_STATUS_SUCCESS) {
     counter++;
   }
 }
@@ -112,7 +112,7 @@ void loop()  {
   if (event_type == EVENT_MSG_ACK)
   {
     uint16_t counter_read = 0;
-    if (astronode.read_satellite_ack(&counter_read) == ASN_NO_ERROR)
+    if (astronode.read_satellite_ack(&counter_read) == ANS_STATUS_SUCCESS)
     {
       astronode.clear_satellite_ack();
       astronode.enqueue_payload(data, sizeof(data), counter);

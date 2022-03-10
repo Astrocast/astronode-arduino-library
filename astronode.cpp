@@ -1,20 +1,20 @@
 /******************************************************************************************
-* File:        astronode.cpp
-* Author:      Raphael Valceschini
-* Compagny:    Astrocast SA
-* Website:     https://www.astrocast.com/
-* E-mail:      rvalceschini@astrocast.com
-******************************************************************************************/
+ * File:        astronode.cpp
+ * Author:      Raphael Valceschini
+ * Compagny:    Astrocast SA
+ * Website:     https://www.astrocast.com/
+ * E-mail:      rvalceschini@astrocast.com
+ ******************************************************************************************/
 /****************************************************************************************
-* Created on: 			01.04.2021
-* Supported Hardware: Arduino MKR 1400
-*
-* Firmware Version 1.0
-****************************************************************************************/
+ * Created on: 			01.04.2021
+ * Supported Hardware: Arduino MKR 1400
+ *
+ * Firmware Version 1.0
+ ****************************************************************************************/
 
 #include "astronode.h"
 
-uint8_t ASTRONODE::begin(Stream &serialPort)
+ans_status_e ASTRONODE::begin(Stream &serialPort)
 {
   if ((_printDebug == true) || (_printFullDebug == true))
   {
@@ -23,36 +23,31 @@ uint8_t ASTRONODE::begin(Stream &serialPort)
 
   _serialPort = &serialPort;
 
-  //Set-up UART
+  // Set-up UART
   _serialPort->setTimeout(TIMEOUT_SERIAL);
 
-  //Clear buffer
+  // Clear buffer
   while (_serialPort->available() > 0)
   {
     _serialPort->read();
   }
 
-  //Wait for boot to complete
-  delay(BOOT_TIME);
-
-  //Send dummy command (known bug in Astronode S)
+  // Send dummy command (known bug in Astronode S)
   dummy_cmd();
 
-  //Read module state
-  if (read_module_state() != ASN_NO_ERROR)
-    return ASN_ERROR_FAILED;
-
-  return ASN_NO_ERROR;
+  // Read module state
+  return read_module_state();
 }
 
 void ASTRONODE::end()
 {
-  //Empty
+  // Empty
 }
 
-void ASTRONODE::enableDebugging(Stream &debugPort, bool printFullDebug)
+void ASTRONODE::enableDebugging(Stream &debugPort,
+                                bool printFullDebug)
 {
-  _debugSerial = &debugPort; //Grab which port the user wants us to use for debugging
+  _debugSerial = &debugPort; // Grab which port the user wants us to use for debugging
   if (printFullDebug == true)
   {
     _printFullDebug = true;
@@ -66,19 +61,19 @@ void ASTRONODE::disableDebugging(void)
   _printFullDebug = false;
 }
 
-uint8_t ASTRONODE::configuration_write(bool with_pl_ack,
-                                       bool with_geoloc,
-                                       bool with_ephemeris,
-                                       bool with_deep_sleep,
-                                       bool with_ack_event_pin_mask,
-                                       bool with_reset_event_pin_mask)
+ans_status_e ASTRONODE::configuration_write(bool with_pl_ack,
+                                            bool with_geoloc,
+                                            bool with_ephemeris,
+                                            bool with_deep_sleep,
+                                            bool with_ack_event_pin_mask,
+                                            bool with_reset_event_pin_mask)
 {
   if ((_printDebug == true) || (_printFullDebug == true))
   {
     _debugSerial->println(F("ASTRONODE - Set configuration"));
   }
 
-  //Set parameters
+  // Set parameters
   uint8_t param_w[3] = {};
 
   if (with_pl_ack)
@@ -94,31 +89,37 @@ uint8_t ASTRONODE::configuration_write(bool with_pl_ack,
   if (with_reset_event_pin_mask)
     param_w[2] |= 1 << 1;
 
-  //Send request
-  if (encode_send_request(CFG_WR, param_w, sizeof(param_w)) == ASN_NO_ERROR)
+  // Send request
+  uint8_t reg = CFG_WR;
+  ans_status_e ret_val = encode_send_request(reg, param_w, sizeof(param_w));
+  if (ret_val == ANS_STATUS_DATA_SENT)
   {
-    if (receive_decode_answer(NULL, 0) == CFG_WA)
+    ret_val = receive_decode_answer(&reg, NULL, 0);
+    if (ret_val == ANS_STATUS_DATA_RECEIVED && reg == CFG_WA)
     {
-      return ASN_NO_ERROR;
+      ret_val = ANS_STATUS_SUCCESS;
     }
   }
-  return ASN_ERROR_FAILED;
+  return ret_val;
 }
 
-uint8_t ASTRONODE::configuration_read(void)
+ans_status_e ASTRONODE::configuration_read(void)
 {
   if ((_printDebug == true) || (_printFullDebug == true))
   {
     _debugSerial->println(F("ASTRONODE - Read configuration"));
   }
 
-  //Set parameters
+  // Set parameters
   uint8_t param_a[8] = {};
 
-  //Send request
-  if (encode_send_request(CFG_RR, NULL, 0) == ASN_NO_ERROR)
+  // Send request
+  uint8_t reg = CFG_RR;
+  ans_status_e ret_val = encode_send_request(reg, NULL, 0);
+  if (ret_val == ANS_STATUS_DATA_SENT)
   {
-    if (receive_decode_answer(param_a, sizeof(param_a)) == CFG_RA)
+    ret_val = receive_decode_answer(&reg, param_a, sizeof(param_a));
+    if (ret_val == ANS_STATUS_DATA_RECEIVED && reg == CFG_RA)
     {
       config.product_id = param_a[0];
       config.hardware_rev = param_a[1];
@@ -132,41 +133,46 @@ uint8_t ASTRONODE::configuration_read(void)
       config.with_msg_ack_pin_en = (param_a[7] & (1 << 0));
       config.with_msg_reset_pin_en = (param_a[7] & (1 << 1));
 
-      return ASN_NO_ERROR;
+      ret_val = ANS_STATUS_SUCCESS;
     }
   }
-  return ASN_ERROR_FAILED;
+  return ret_val;
 }
 
-uint8_t ASTRONODE::configuration_save(void)
+ans_status_e ASTRONODE::configuration_save(void)
 {
   if ((_printDebug == true) || (_printFullDebug == true))
   {
     _debugSerial->println(F("ASTRONODE - Save configuration"));
   }
 
-  //Set parameters
-  //None
+  // Set parameters
+  // None
 
-  //Send request
-  if (encode_send_request(CFG_SR, NULL, 0) == ASN_NO_ERROR)
+  // Send request
+  uint8_t reg = CFG_SR;
+  ans_status_e ret_val = encode_send_request(reg, NULL, 0);
+  if (ret_val == ANS_STATUS_DATA_SENT)
   {
-    if (receive_decode_answer(NULL, 0) == CFG_SA)
+    ret_val = receive_decode_answer(&reg, NULL, 0);
+    if (ret_val == ANS_STATUS_DATA_RECEIVED && reg == CFG_SA)
     {
-      return ASN_NO_ERROR;
+      ret_val = ANS_STATUS_SUCCESS;
     }
   }
-  return ASN_ERROR_FAILED;
+  return ret_val;
 }
 
-uint8_t ASTRONODE::wifi_configuration_write(const char *wland_ssid, const char *wland_key, const char *auth_token)
+ans_status_e ASTRONODE::wifi_configuration_write(const char *wland_ssid,
+                                                 const char *wland_key,
+                                                 const char *auth_token)
 {
   if ((_printDebug == true) || (_printFullDebug == true))
   {
     _debugSerial->println(F("ASTRONODE - Set Wifi configuration"));
   }
 
-  //Set parameters
+  // Set parameters
   uint8_t param_w[194] = {'\0'};
 
   uint8_t wland_ssid_length = strlen(wland_ssid);
@@ -177,25 +183,29 @@ uint8_t ASTRONODE::wifi_configuration_write(const char *wland_ssid, const char *
   memcpy(&param_w[33], wland_key, wland_key_length);
   memcpy(&param_w[97], auth_token, auth_token_length);
 
-  //Send request
-  if (encode_send_request(WIF_WR, param_w, sizeof(param_w)) == ASN_NO_ERROR)
+  // Send request
+  uint8_t reg = WIF_WR;
+  ans_status_e ret_val = encode_send_request(reg, param_w, sizeof(param_w));
+  if (ret_val == ANS_STATUS_DATA_SENT)
   {
-    if (receive_decode_answer(NULL, 0) == WIF_WA)
+    ret_val = receive_decode_answer(&reg, NULL, 0);
+    if (ret_val == ANS_STATUS_DATA_RECEIVED && reg == WIF_WA)
     {
-      return ASN_NO_ERROR;
+      ret_val = ANS_STATUS_SUCCESS;
     }
   }
-  return ASN_ERROR_FAILED;
+  return ret_val;
 }
 
-uint8_t ASTRONODE::satellite_search_config_write(uint8_t search_period, bool force_search)
+ans_status_e ASTRONODE::satellite_search_config_write(uint8_t search_period,
+                                                      bool force_search)
 {
   if ((_printDebug == true) || (_printFullDebug == true))
   {
     _debugSerial->println(F("ASTRONODE - Set satellite search rate"));
   }
 
-  //Set parameters
+  // Set parameters
   uint8_t param_w[2] = {};
 
   param_w[0] = search_period;
@@ -203,18 +213,22 @@ uint8_t ASTRONODE::satellite_search_config_write(uint8_t search_period, bool for
   if (force_search)
     param_w[1] |= 1 << 0;
 
-  //Send request
-  if (encode_send_request(SSC_WR, param_w, sizeof(param_w)) == ASN_NO_ERROR)
+  // Send request
+  uint8_t reg = SSC_WR;
+  ans_status_e ret_val = encode_send_request(reg, param_w, sizeof(param_w));
+  if (ret_val == ANS_STATUS_DATA_SENT)
   {
-    if (receive_decode_answer(NULL, 0) == SSC_WA)
+    ret_val = receive_decode_answer(&reg, NULL, 0);
+    if (ret_val == ANS_STATUS_DATA_RECEIVED && reg == SSC_WA)
     {
-      return ASN_NO_ERROR;
+      ret_val = ANS_STATUS_SUCCESS;
     }
   }
-  return ASN_ERROR_FAILED;
+  return ret_val;
 }
 
-uint8_t ASTRONODE::geolocation_write(int32_t lat, int32_t lon)
+ans_status_e ASTRONODE::geolocation_write(int32_t lat,
+                                          int32_t lon)
 {
   if ((_printDebug == true) || (_printFullDebug == true))
   {
@@ -224,180 +238,209 @@ uint8_t ASTRONODE::geolocation_write(int32_t lat, int32_t lon)
     _debugSerial->println(lon);
   }
 
-  //Set parameters
+  // Set parameters
   uint8_t param_w[8] = {};
 
   memcpy(&param_w[0], &lat, sizeof(lat));
   memcpy(&param_w[4], &lon, sizeof(lon));
 
-  //Send request
-  if (encode_send_request(GEO_WR, param_w, sizeof(param_w)) == ASN_NO_ERROR)
+  // Send request
+  uint8_t reg = GEO_WR;
+  ans_status_e ret_val = encode_send_request(reg, param_w, sizeof(param_w));
+  if (ret_val == ANS_STATUS_DATA_SENT)
   {
-    if (receive_decode_answer(NULL, 0) == GEO_WA)
+    ret_val = receive_decode_answer(&reg, NULL, 0);
+    if (ret_val == ANS_STATUS_DATA_RECEIVED && reg == GEO_WA)
     {
-      return ASN_NO_ERROR;
+      ret_val = ANS_STATUS_SUCCESS;
     }
   }
-  return ASN_ERROR_FAILED;
+  return ret_val;
 }
 
-uint8_t ASTRONODE::factory_reset(void)
+ans_status_e ASTRONODE::factory_reset(void)
 {
   if ((_printDebug == true) || (_printFullDebug == true))
   {
     _debugSerial->println(F("ASTRONODE - Factory reset"));
   }
 
-  //Set parameters
-  //None
+  // Set parameters
+  // None
 
-  //Send request
-  if (encode_send_request(CFG_FR, NULL, 0) == ASN_NO_ERROR)
+  // Send request
+  uint8_t reg = CFG_FR;
+  ans_status_e ret_val = encode_send_request(reg, NULL, 0);
+  if (ret_val == ANS_STATUS_DATA_SENT)
   {
-    if (receive_decode_answer(NULL, 0) == CFG_FA)
+    ret_val = receive_decode_answer(&reg, NULL, 0);
+    if (ret_val == ANS_STATUS_DATA_RECEIVED && reg == CFG_FA)
     {
-      return ASN_NO_ERROR;
+      ret_val = ANS_STATUS_SUCCESS;
     }
   }
-  return ASN_ERROR_FAILED;
+  return ret_val;
 }
 
-uint8_t ASTRONODE::guid_read(String *guid)
+ans_status_e ASTRONODE::guid_read(String *guid)
 {
   if ((_printDebug == true) || (_printFullDebug == true))
   {
     _debugSerial->println(F("ASTRONODE - Read GUID"));
   }
 
-  //Set parameters
+  // Set parameters
   uint8_t param_a[36] = {};
 
-  //Send request
-  if (encode_send_request(MGI_RR, NULL, 0) == ASN_NO_ERROR)
+  // Send request
+  uint8_t reg = MGI_RR;
+  ans_status_e ret_val = encode_send_request(reg, NULL, 0);
+  if (ret_val == ANS_STATUS_DATA_SENT)
   {
-    if (receive_decode_answer(param_a, sizeof(param_a)) == MGI_RA)
+    ret_val = receive_decode_answer(&reg, param_a, sizeof(param_a));
+    if (ret_val == ANS_STATUS_DATA_RECEIVED && reg == MGI_RA)
     {
       for (uint8_t i = 0; i < sizeof(param_a); i++)
       {
         guid->concat((char)param_a[i]);
       }
-      return ASN_NO_ERROR;
+      ret_val = ANS_STATUS_SUCCESS;
     }
   }
-  return ASN_ERROR_FAILED;
+  return ret_val;
 }
 
-uint8_t ASTRONODE::serial_number_read(String *sn)
+ans_status_e ASTRONODE::serial_number_read(String *sn)
 {
   if ((_printDebug == true) || (_printFullDebug == true))
   {
     _debugSerial->println(F("ASTRONODE - Read SN"));
   }
 
-  //Set parameters
+  // Set parameters
   uint8_t param_a[16] = {};
 
-  //Send request
-  if (encode_send_request(MSN_RR, NULL, 0) == ASN_NO_ERROR)
+  // Send request
+  uint8_t reg = MSN_RR;
+  ans_status_e ret_val = encode_send_request(reg, NULL, 0);
+  if (ret_val == ANS_STATUS_DATA_SENT)
   {
-    if (receive_decode_answer(param_a, sizeof(param_a)) == MSN_RA)
+    ret_val = receive_decode_answer(&reg, param_a, sizeof(param_a));
+    if (ret_val == ANS_STATUS_DATA_RECEIVED && reg == MSN_RA)
     {
       for (uint8_t i = 0; i < sizeof(param_a); i++)
       {
         sn->concat((char)param_a[i]);
       }
-      return ASN_NO_ERROR;
+      ret_val = ANS_STATUS_SUCCESS;
     }
   }
-  return ASN_ERROR_FAILED;
+  return ret_val;
 }
 
-uint8_t ASTRONODE::product_number_read(String *pn)
+ans_status_e ASTRONODE::product_number_read(String *pn)
 {
   if ((_printDebug == true) || (_printFullDebug == true))
   {
     _debugSerial->println(F("ASTRONODE - Read PN"));
   }
 
-  //Set parameters
+  // Set parameters
   uint8_t param_a[16] = {};
 
-  //Send request
-  if (encode_send_request(MPN_RR, NULL, 0) == ASN_NO_ERROR)
+  // Send request
+  uint8_t reg = MPN_RR;
+  ans_status_e ret_val = encode_send_request(reg, NULL, 0);
+  if (encode_send_request(reg, NULL, 0) == ANS_STATUS_DATA_SENT)
   {
-    if (receive_decode_answer(param_a, sizeof(param_a)) == MPN_RA)
+    ret_val = receive_decode_answer(&reg, param_a, sizeof(param_a));
+    if (ret_val == ANS_STATUS_DATA_RECEIVED && reg == MPN_RA)
     {
       for (uint8_t i = 0; i < sizeof(param_a); i++)
       {
         pn->concat((char)param_a[i]);
       }
-      return ASN_NO_ERROR;
+      ret_val = ANS_STATUS_SUCCESS;
     }
   }
-  return ASN_ERROR_FAILED;
+  return ret_val;
 }
 
-uint8_t ASTRONODE::rtc_read(uint32_t *time)
+ans_status_e ASTRONODE::rtc_read(uint32_t *time)
 {
   if ((_printDebug == true) || (_printFullDebug == true))
   {
     _debugSerial->println(F("ASTRONODE - Read RTC"));
   }
 
-  //Set parameters
+  // Set parameters
   uint8_t param_a[4] = {};
 
-  //Send request
-  if (encode_send_request(RTC_RR, NULL, 0) == ASN_NO_ERROR)
+  // Send request
+  uint8_t reg = RTC_RR;
+  ans_status_e ret_val = encode_send_request(reg, NULL, 0);
+  if (ret_val == ANS_STATUS_DATA_SENT)
   {
-    if (receive_decode_answer(param_a, sizeof(param_a)) == RTC_RA)
+    ret_val = receive_decode_answer(&reg, param_a, sizeof(param_a));
+    if (ret_val == ANS_STATUS_DATA_RECEIVED && reg == RTC_RA)
     {
-      uint32_t time_tmp = (((uint32_t)param_a[3]) << 24) + (((uint32_t)param_a[2]) << 16) + (((uint32_t)param_a[1]) << 8) + (uint32_t)(param_a[0]);
-
+      uint32_t time_tmp = (((uint32_t)param_a[3]) << 24) +
+                          (((uint32_t)param_a[2]) << 16) +
+                          (((uint32_t)param_a[1]) << 8) +
+                          (((uint32_t)param_a[0]) << 0);
       *time = time_tmp + ASTROCAST_REF_UNIX_TIME;
-
-      return ASN_NO_ERROR;
+      ret_val = ANS_STATUS_SUCCESS;
     }
   }
-  return ASN_ERROR_FAILED;
+  return ret_val;
 }
 
-uint8_t ASTRONODE::read_next_contact_opportunity(uint32_t *time_to_next_pass)
+ans_status_e ASTRONODE::read_next_contact_opportunity(uint32_t *time)
 {
   if ((_printDebug == true) || (_printFullDebug == true))
   {
     _debugSerial->println(F("ASTRONODE - Read next contact opportunity"));
   }
 
-  //Set parameters
+  // Set parameters
   uint8_t param_a[4] = {};
 
-  //Send request
-  if (encode_send_request(NCO_RR, NULL, 0) == ASN_NO_ERROR)
+  // Send request
+  uint8_t reg = NCO_RR;
+  ans_status_e ret_val = encode_send_request(reg, NULL, 0);
+  if (ret_val == ANS_STATUS_DATA_SENT)
   {
-    if (receive_decode_answer(param_a, sizeof(param_a)) == NCO_RA)
+    ret_val = receive_decode_answer(&reg, param_a, sizeof(param_a));
+    if (ret_val == ANS_STATUS_DATA_RECEIVED && reg == NCO_RA)
     {
-      *time_to_next_pass = (((uint32_t)param_a[3]) << 24) + (((uint32_t)param_a[2]) << 16) + (((uint32_t)param_a[1]) << 8) + (uint32_t)(param_a[0]);
-      return ASN_NO_ERROR;
+      uint32_t time_tmp = (((uint32_t)param_a[3]) << 24) +
+                          (((uint32_t)param_a[2]) << 16) +
+                          (((uint32_t)param_a[1]) << 8) +
+                          (((uint32_t)param_a[0] << 0));
+      *time = time_tmp + ASTROCAST_REF_UNIX_TIME;
+      ret_val = ANS_STATUS_SUCCESS;
     }
   }
-  return ASN_ERROR_FAILED;
+  return ret_val;
 }
 
-uint8_t ASTRONODE::read_performance_counter(void)
+ans_status_e ASTRONODE::read_performance_counter(void)
 {
   if ((_printDebug == true) || (_printFullDebug == true))
   {
     _debugSerial->println(F("ASTRONODE - Read performance counter"));
   }
 
-  //Set parameters
+  // Set parameters
   uint8_t param_a[PER_CMD_LENGTH] = {};
 
-  //Send request
-  if (encode_send_request(PER_RR, NULL, 0) == ASN_NO_ERROR)
+  // Send request
+  uint8_t reg = PER_RR;
+  ans_status_e ret_val = encode_send_request(reg, NULL, 0);
+  if (ret_val == ANS_STATUS_DATA_SENT)
   {
-    if (receive_decode_answer(param_a, sizeof(param_a)) == PER_RA)
+    ret_val = receive_decode_answer(&reg, param_a, sizeof(param_a));
+    if (ret_val == ANS_STATUS_DATA_RECEIVED && reg == PER_RA)
     {
       uint8_t i = 0;
       do
@@ -465,69 +508,77 @@ uint8_t ASTRONODE::read_performance_counter(void)
         }
         i += length;
       } while (i < PER_CMD_LENGTH);
-
-      return ASN_NO_ERROR;
+      ret_val = ANS_STATUS_SUCCESS;
     }
   }
-  return ASN_ERROR_FAILED;
+  return ret_val;
 }
 
-uint8_t ASTRONODE::save_performance_counter(void)
+ans_status_e ASTRONODE::save_performance_counter(void)
 {
   if ((_printDebug == true) || (_printFullDebug == true))
   {
     _debugSerial->println(F("ASTRONODE - Save performance counter"));
   }
 
-  //Set parameters
-  //None
+  // Set parameters
+  // None
 
-  //Send request
-  if (encode_send_request(PER_SR, NULL, 0) == ASN_NO_ERROR)
+  // Send request
+  uint8_t reg = PER_SR;
+  ans_status_e ret_val = encode_send_request(reg, NULL, 0);
+  if (ret_val == ANS_STATUS_DATA_SENT)
   {
-    if (receive_decode_answer(NULL, 0) == PER_SA)
+    ret_val = receive_decode_answer(&reg, NULL, 0);
+    if (ret_val == ANS_STATUS_DATA_RECEIVED && reg == PER_SA)
     {
-      return ASN_NO_ERROR;
+      ret_val = ANS_STATUS_SUCCESS;
     }
   }
-  return ASN_ERROR_FAILED;
+  return ret_val;
 }
 
-uint8_t ASTRONODE::clear_performance_counter(void)
+ans_status_e ASTRONODE::clear_performance_counter(void)
 {
   if ((_printDebug == true) || (_printFullDebug == true))
   {
     _debugSerial->println(F("ASTRONODE - Clear performance counter"));
   }
 
-  //Set parameters
-  //None
+  // Set parameters
+  // None
 
-  //Send request
-  if (encode_send_request(PER_CR, NULL, 0) == ASN_NO_ERROR)
+  // Send request
+  uint8_t reg = PER_CR;
+  ans_status_e ret_val = encode_send_request(reg, NULL, 0);
+  if (ret_val == ANS_STATUS_DATA_SENT)
   {
-    if (receive_decode_answer(NULL, 0) == PER_CA)
+    ret_val = receive_decode_answer(&reg, NULL, 0);
+    if (ret_val == ANS_STATUS_DATA_RECEIVED && reg == PER_CA)
     {
-      return ASN_NO_ERROR;
+      ret_val = ANS_STATUS_SUCCESS;
     }
   }
-  return ASN_ERROR_FAILED;
+  return ret_val;
 }
 
-uint8_t ASTRONODE::read_module_state(void)
+ans_status_e ASTRONODE::read_module_state(void)
 {
   if ((_printDebug == true) || (_printFullDebug == true))
   {
     _debugSerial->println(F("ASTRONODE - Read module state"));
   }
 
-  //Set parameters
+  // Set parameters
   uint8_t param_a[MST_CMD_LENGTH] = {};
 
-  //Send request
-  if (encode_send_request(MST_RR, NULL, 0) == ASN_NO_ERROR)
+  // Send request
+  uint8_t reg = MST_RR;
+  ans_status_e ret_val = encode_send_request(reg, NULL, 0);
+  if (ret_val == ANS_STATUS_DATA_SENT)
   {
-    if (receive_decode_answer(param_a, sizeof(param_a)) == MST_RA)
+    ret_val = receive_decode_answer(&reg, param_a, sizeof(param_a));
+    if (ret_val == ANS_STATUS_DATA_RECEIVED && reg == MST_RA)
     {
       uint8_t i = 0;
       do
@@ -555,27 +606,29 @@ uint8_t ASTRONODE::read_module_state(void)
         }
         i += length;
       } while (i < MST_CMD_LENGTH);
-
-      return ASN_NO_ERROR;
+      ret_val = ANS_STATUS_SUCCESS;
     }
   }
-  return ASN_ERROR_FAILED;
+  return ret_val;
 }
 
-uint8_t ASTRONODE::read_environment_details(void)
+ans_status_e ASTRONODE::read_environment_details(void)
 {
   if ((_printDebug == true) || (_printFullDebug == true))
   {
     _debugSerial->println(F("ASTRONODE - Read environment details"));
   }
 
-  //Set parameters
+  // Set parameters
   uint8_t param_a[END_CMD_LENGTH] = {};
 
-  //Send request
-  if (encode_send_request(END_RR, NULL, 0) == ASN_NO_ERROR)
+  // Send request
+  uint8_t reg = END_RR;
+  ans_status_e ret_val = encode_send_request(reg, NULL, 0);
+  if (ret_val == ANS_STATUS_DATA_SENT)
   {
-    if (receive_decode_answer(param_a, sizeof(param_a)) == END_RA)
+    ret_val = receive_decode_answer(&reg, param_a, sizeof(param_a));
+    if (ret_val == ANS_STATUS_DATA_RECEIVED && reg == END_RA)
     {
       uint8_t i = 0;
       do
@@ -599,27 +652,29 @@ uint8_t ASTRONODE::read_environment_details(void)
         }
         i += length;
       } while (i < END_CMD_LENGTH);
-
-      return ASN_NO_ERROR;
+      ret_val = ANS_STATUS_SUCCESS;
     }
   }
-  return ASN_ERROR_FAILED;
+  return ret_val;
 }
 
-uint8_t ASTRONODE::read_last_contact_details(void)
+ans_status_e ASTRONODE::read_last_contact_details(void)
 {
   if ((_printDebug == true) || (_printFullDebug == true))
   {
     _debugSerial->println(F("ASTRONODE - Read last contact details"));
   }
 
-  //Set parameters
+  // Set parameters
   uint8_t param_a[LCD_CMD_LENGTH] = {};
 
-  //Send request
-  if (encode_send_request(LCD_RR, NULL, 0) == ASN_NO_ERROR)
+  // Send request
+  uint8_t reg = LCD_RR;
+  ans_status_e ret_val = encode_send_request(reg, NULL, 0);
+  if (ret_val == ANS_STATUS_DATA_SENT)
   {
-    if (receive_decode_answer(param_a, sizeof(param_a)) == LCD_RA)
+    ret_val = receive_decode_answer(&reg, param_a, sizeof(param_a));
+    if (ret_val == ANS_STATUS_DATA_RECEIVED && reg == LCD_RA)
     {
       uint8_t i = 0;
       do
@@ -647,14 +702,15 @@ uint8_t ASTRONODE::read_last_contact_details(void)
         }
         i += length;
       } while (i < LCD_CMD_LENGTH);
-
-      return ASN_NO_ERROR;
+      ret_val = ANS_STATUS_SUCCESS;
     }
   }
-  return ASN_ERROR_FAILED;
+  return ret_val;
 }
 
-uint8_t ASTRONODE::enqueue_payload(uint8_t *data, uint8_t length, uint16_t id)
+ans_status_e ASTRONODE::enqueue_payload(uint8_t *data,
+                                        uint8_t length,
+                                        uint16_t id)
 {
   if ((_printDebug == true) || (_printFullDebug == true))
   {
@@ -664,9 +720,10 @@ uint8_t ASTRONODE::enqueue_payload(uint8_t *data, uint8_t length, uint16_t id)
     _debugSerial->println(id);
   }
 
+  ans_status_e ret_val;
   if (length < ASN_MAX_MSG_SIZE)
   {
-    //Set parameters
+    // Set parameters
     uint8_t param_w[160 + 2] = {};
     uint8_t param_a[2] = {};
 
@@ -675,25 +732,36 @@ uint8_t ASTRONODE::enqueue_payload(uint8_t *data, uint8_t length, uint16_t id)
 
     memcpy(&param_w[2], data, length);
 
-    //Send request
-    if (encode_send_request(PLD_ER, param_w, length + 2) == ASN_NO_ERROR)
+    // Send request
+    uint8_t reg = PLD_ER;
+    ret_val = encode_send_request(reg, param_w, length + 2);
+    if (ret_val == ANS_STATUS_DATA_SENT)
     {
-      if (receive_decode_answer(param_a, sizeof(param_a)) == PLD_EA)
+      ret_val = receive_decode_answer(&reg, param_a, sizeof(param_a));
+      if (ret_val == ANS_STATUS_DATA_RECEIVED && reg == PLD_EA)
       {
-        //Check that enqueued payload has the correct ID
+        // Check that enqueued payload has the correct ID
         uint16_t id_check = (((uint16_t)param_a[1]) << 8) + ((uint16_t)param_a[0]);
         if (id == id_check)
         {
-          return ASN_NO_ERROR;
+          ret_val = ANS_STATUS_SUCCESS;
+        }
+        else
+        {
+          ret_val = ANS_STATUS_PAYLOD_ID_CHECK_FAILED;
         }
       }
     }
   }
+  else
+  {
+    ret_val = ANS_STATUS_PAYLOAD_TOO_LONG;
+  }
 
-  return ASN_ERROR_FAILED;
+  return ret_val;
 }
 
-uint8_t ASTRONODE::dequeue_payload(uint16_t *id)
+ans_status_e ASTRONODE::dequeue_payload(uint16_t *id)
 {
   if ((_printDebug == true) || (_printFullDebug == true))
   {
@@ -701,57 +769,65 @@ uint8_t ASTRONODE::dequeue_payload(uint16_t *id)
     _debugSerial->println(*id);
   }
 
-  //Set parameters
+  // Set parameters
   uint8_t param_a[2] = {};
 
-  //Send request
-  if (encode_send_request(PLD_DR, NULL, 0) == ASN_NO_ERROR)
+  // Send request
+  uint8_t reg = PLD_DR;
+  ans_status_e ret_val = encode_send_request(reg, NULL, 0);
+  if (ret_val == ANS_STATUS_DATA_SENT)
   {
-    if (receive_decode_answer(param_a, sizeof(param_a)) == PLD_DA)
+    ret_val = receive_decode_answer(&reg, param_a, sizeof(param_a));
+    if (ret_val == ANS_STATUS_DATA_RECEIVED && reg == PLD_DA)
     {
       *id = (((uint16_t)param_a[1]) << 8) + ((uint16_t)param_a[0]);
-
-      return ASN_NO_ERROR;
+      ret_val = ANS_STATUS_SUCCESS;
     }
   }
-  return ASN_ERROR_FAILED;
+  return ret_val;
 }
 
-uint8_t ASTRONODE::clear_free_payloads(void)
+ans_status_e ASTRONODE::clear_free_payloads(void)
 {
   if ((_printDebug == true) || (_printFullDebug == true))
   {
     _debugSerial->println(F("ASTRONODE - Clear all payloads"));
   }
 
-  //Set parameters
-  //None
+  // Set parameters
+  // None
 
-  //Send request
-  if (encode_send_request(PLD_FR, NULL, 0) == ASN_NO_ERROR)
+  // Send request
+  uint8_t reg = PLD_FR;
+  ans_status_e ret_val = encode_send_request(reg, NULL, 0);
+  if (ret_val == ANS_STATUS_DATA_SENT)
   {
-    if (receive_decode_answer(NULL, 0) == PLD_FA)
+    ret_val = receive_decode_answer(&reg, NULL, 0);
+    if (ret_val == ANS_STATUS_DATA_RECEIVED && reg == PLD_FA)
     {
-      return ASN_NO_ERROR;
+      ret_val = ANS_STATUS_SUCCESS;
     }
   }
-  return ASN_ERROR_FAILED;
+  return ret_val;
 }
 
-uint8_t ASTRONODE::event_read(uint8_t *event_type)
+ans_status_e ASTRONODE::event_read(uint8_t *event_type)
 {
   if ((_printDebug == true) || (_printFullDebug == true))
   {
     _debugSerial->println(F("ASTRONODE - Read event"));
   }
 
-  //Set parameters
+  // Set parameters
   uint8_t param_a;
 
-  //Send request
-  if (encode_send_request(EVT_RR, NULL, 0) == ASN_NO_ERROR)
+  // Send request
+  uint8_t reg = EVT_RR;
+  ans_status_e ret_val = encode_send_request(reg, NULL, 0);
+  if (ret_val == ANS_STATUS_DATA_SENT)
   {
-    if (receive_decode_answer(&param_a, sizeof(param_a)) == EVT_RA)
+    ret_val = receive_decode_answer(&reg, &param_a, sizeof(param_a));
+    if (ret_val == ANS_STATUS_DATA_RECEIVED && reg == EVT_RA)
     {
       if (param_a & (1 << 0))
       {
@@ -773,151 +849,173 @@ uint8_t ASTRONODE::event_read(uint8_t *event_type)
       {
         *event_type = EVENT_NO_EVENT;
       }
-      return ASN_NO_ERROR;
+      ret_val = ANS_STATUS_SUCCESS;
     }
   }
-  return ASN_ERROR_FAILED;
+  return ret_val;
 }
 
-uint8_t ASTRONODE::read_satellite_ack(uint16_t *id)
+ans_status_e ASTRONODE::read_satellite_ack(uint16_t *id)
 {
   if ((_printDebug == true) || (_printFullDebug == true))
   {
     _debugSerial->print(F("ASTRONODE - Read satellite ack for id "));
-    _debugSerial->println(*id);
   }
 
-  //Set parameters
+  // Set parameters
   uint8_t param_a[2] = {};
 
-  //Send request
-  if (encode_send_request(SAK_RR, NULL, 0) == ASN_NO_ERROR)
+  // Send request
+  uint8_t reg = SAK_RR;
+  ans_status_e ret_val = encode_send_request(SAK_RR, NULL, 0);
+  if (ret_val == ANS_STATUS_DATA_SENT)
   {
-    if (receive_decode_answer(param_a, sizeof(param_a)) == SAK_RA)
+    ret_val = receive_decode_answer(&reg, param_a, sizeof(param_a));
+    if (ret_val == ANS_STATUS_DATA_RECEIVED && reg == SAK_RA)
     {
       *id = (((uint16_t)param_a[1]) << 8) + (uint16_t)(param_a[0]);
-
-      return ASN_NO_ERROR;
+      if ((_printDebug == true) || (_printFullDebug == true))
+      {
+        _debugSerial->println(*id);
+      }
+      ret_val = ANS_STATUS_SUCCESS;
     }
   }
-  return ASN_ERROR_FAILED;
+  return ret_val;
 }
 
-uint8_t ASTRONODE::clear_satellite_ack(void)
+ans_status_e ASTRONODE::clear_satellite_ack(void)
 {
   if ((_printDebug == true) || (_printFullDebug == true))
   {
     _debugSerial->println(F("ASTRONODE - Clear satellite ack event"));
   }
 
-  //Set parameters
-  //None
+  // Set parameters
+  // None
 
-  //Send request
-  if (encode_send_request(SAK_CR, NULL, 0) == ASN_NO_ERROR)
+  // Send request
+  uint8_t reg = SAK_CR;
+  ans_status_e ret_val = encode_send_request(reg, NULL, 0);
+  if (ret_val == ANS_STATUS_DATA_SENT)
   {
-    if (receive_decode_answer(NULL, 0) == SAK_CA)
+    ret_val = receive_decode_answer(&reg, NULL, 0);
+    if (ret_val == ANS_STATUS_DATA_RECEIVED && reg == SAK_CA)
     {
-      return ASN_NO_ERROR;
+      ret_val = ANS_STATUS_SUCCESS;
     }
   }
-  return ASN_ERROR_FAILED;
+  return ret_val;
 }
 
-uint8_t ASTRONODE::clear_reset_event(void)
+ans_status_e ASTRONODE::clear_reset_event(void)
 {
   if ((_printDebug == true) || (_printFullDebug == true))
   {
     _debugSerial->println(F("ASTRONODE - Clear reset event"));
   }
 
-  //Set parameters
-  //None
+  // Set parameters
+  // None
 
-  //Send request
-  if (encode_send_request(RES_CR, NULL, 0) == ASN_NO_ERROR)
+  // Send request
+  uint8_t reg = RES_CR;
+  ans_status_e ret_val = encode_send_request(reg, NULL, 0);
+  if (ret_val == ANS_STATUS_DATA_SENT)
   {
-    if (receive_decode_answer(NULL, 0) == RES_CA)
+    ret_val = receive_decode_answer(&reg, NULL, 0);
+    if (ret_val == ANS_STATUS_DATA_RECEIVED && reg == RES_CA)
     {
-      return ASN_NO_ERROR;
+      ret_val = ANS_STATUS_SUCCESS;
     }
   }
-  return ASN_ERROR_FAILED;
+  return ret_val;
 }
 
-uint8_t ASTRONODE::read_command_8B(uint8_t data[8], uint32_t *createdDate)
+ans_status_e ASTRONODE::read_command_8B(uint8_t data[8],
+                                        uint32_t *createdDate)
 {
   if ((_printDebug == true) || (_printFullDebug == true))
   {
     _debugSerial->println(F("ASTRONODE - Read command"));
   }
 
-  //Set parameters
+  // Set parameters
   uint8_t param_a[12] = {};
 
-  //Send request
-  if (encode_send_request(CMD_RR, NULL, 0) == ASN_NO_ERROR)
+  // Send request
+  uint8_t reg = CMD_RR;
+  ans_status_e ret_val = encode_send_request(reg, NULL, 0);
+  if (ret_val == ANS_STATUS_DATA_SENT)
   {
-    if (receive_decode_answer(param_a, sizeof(param_a)) == CMD_RA)
+    ret_val = receive_decode_answer(&reg, param_a, sizeof(param_a));
+    if (ret_val == ANS_STATUS_DATA_RECEIVED && reg == CMD_RA)
     {
-      uint32_t time_tmp = (((uint32_t)param_a[3]) << 24) + (((uint32_t)param_a[2]) << 16) + (((uint32_t)param_a[1]) << 8) + (uint32_t)(param_a[0]);
-
+      uint32_t time_tmp = (((uint32_t)param_a[3]) << 24) +
+                          (((uint32_t)param_a[2]) << 16) +
+                          (((uint32_t)param_a[1]) << 8) +
+                          (((uint32_t)param_a[0]) << 0);
       *createdDate = time_tmp + ASTROCAST_REF_UNIX_TIME;
-
       memcpy(data, &param_a[4], 8);
-
-      return ASN_NO_ERROR;
+      ret_val = ANS_STATUS_SUCCESS;
     }
   }
-  return ASN_ERROR_FAILED;
+  return ret_val;
 }
 
-uint8_t ASTRONODE::read_command_40B(uint8_t data[40], uint32_t *createdDate)
+ans_status_e ASTRONODE::read_command_40B(uint8_t data[40],
+                                         uint32_t *createdDate)
 {
   if ((_printDebug == true) || (_printFullDebug == true))
   {
     _debugSerial->println(F("ASTRONODE - Read command"));
   }
 
-  //Set parameters
+  // Set parameters
   uint8_t param_a[44] = {};
 
-  //Send request
-  if (encode_send_request(CMD_RR, NULL, 0) == ASN_NO_ERROR)
+  // Send request
+  uint8_t reg = CMD_RR;
+  ans_status_e ret_val = encode_send_request(reg, NULL, 0);
+  if (ret_val == ANS_STATUS_DATA_SENT)
   {
-    if (receive_decode_answer(param_a, sizeof(param_a)) == CMD_RA)
+    ret_val = receive_decode_answer(&reg, param_a, sizeof(param_a));
+    if (ret_val == ANS_STATUS_DATA_RECEIVED && reg == CMD_RA)
     {
-      uint32_t time_tmp = (((uint32_t)param_a[3]) << 24) + (((uint32_t)param_a[2]) << 16) + (((uint32_t)param_a[1]) << 8) + (uint32_t)(param_a[0]);
-
+      uint32_t time_tmp = (((uint32_t)param_a[3]) << 24) +
+                          (((uint32_t)param_a[2]) << 16) +
+                          (((uint32_t)param_a[1]) << 8) +
+                          (((uint32_t)param_a[0]) << 0);
       *createdDate = time_tmp + ASTROCAST_REF_UNIX_TIME;
-
       memcpy(data, &param_a[4], 40);
-
-      return ASN_NO_ERROR;
+      ret_val = ANS_STATUS_SUCCESS;
     }
   }
-  return ASN_ERROR_FAILED;
+  return ret_val;
 }
 
-uint8_t ASTRONODE::clear_command(void)
+ans_status_e ASTRONODE::clear_command(void)
 {
   if ((_printDebug == true) || (_printFullDebug == true))
   {
     _debugSerial->println(F("ASTRONODE - Clear command"));
   }
 
-  //Set parameters
-  //None
+  // Set parameters
+  // None
 
-  //Send request
-  if (encode_send_request(CMD_CR, NULL, 0) == ASN_NO_ERROR)
+  // Send request
+  uint8_t reg = CMD_CR;
+  ans_status_e ret_val = encode_send_request(reg, NULL, 0);
+  if (ret_val == ANS_STATUS_DATA_SENT)
   {
-    if (receive_decode_answer(NULL, 0) == CMD_CA)
+    ret_val = receive_decode_answer(&reg, NULL, 0);
+    if (ret_val == ANS_STATUS_DATA_RECEIVED && reg == CMD_CA)
     {
-      return ASN_NO_ERROR;
+      ret_val = ANS_STATUS_SUCCESS;
     }
   }
-  return ASN_ERROR_FAILED;
+  return ret_val;
 }
 
 void ASTRONODE::dummy_cmd(void)
@@ -927,13 +1025,18 @@ void ASTRONODE::dummy_cmd(void)
     _debugSerial->println(F("ASTRONODE - Dummy command (will return error code)"));
   }
 
-  encode_send_request(0x00, NULL, 0);
-  receive_decode_answer(NULL, 0);
+  uint8_t reg = 0x00;
+  encode_send_request(reg, NULL, 0);
+  receive_decode_answer(&reg, NULL, 0);
 }
 
-uint8_t ASTRONODE::encode_send_request(uint8_t reg, uint8_t *param, uint8_t param_length)
+ans_status_e ASTRONODE::encode_send_request(uint8_t reg,
+                                            uint8_t *param,
+                                            uint8_t param_length)
 {
-  //Clear buffers (TODO: should not be here)
+  ans_status_e ret_val;
+
+  // Clear buffers
   for (int i = 0; i < COMMAND_MAX_SIZE + 2; i++)
     com_buf_astronode[i] = 0x00;
 
@@ -942,12 +1045,12 @@ uint8_t ASTRONODE::encode_send_request(uint8_t reg, uint8_t *param, uint8_t para
 
   uint16_t index_buf_cmd = 0, index_buf_cmd_hex = 0;
 
-  //Copy command in buffer
+  // Copy command in buffer
   com_buf_astronode[index_buf_cmd++] = reg;
   memcpy(&com_buf_astronode[index_buf_cmd], param, param_length);
   index_buf_cmd += param_length;
 
-  //Compute CRC
+  // Compute CRC
   uint16_t cmd_crc = crc_compute(com_buf_astronode, index_buf_cmd, 0xFFFF);
   memcpy(&com_buf_astronode[index_buf_cmd], &cmd_crc, sizeof(cmd_crc));
   index_buf_cmd += sizeof(cmd_crc);
@@ -958,14 +1061,14 @@ uint8_t ASTRONODE::encode_send_request(uint8_t reg, uint8_t *param, uint8_t para
     print_array_to_hex(com_buf_astronode, index_buf_cmd);
   }
 
-  //Add escape characters
+  // Add escape characters
   com_buf_astronode_hex[index_buf_cmd_hex++] = STX;
 
-  //Translate to hexadecimal
+  // Translate to hexadecimal
   byte_array_to_hex_array(com_buf_astronode, index_buf_cmd, &com_buf_astronode_hex[index_buf_cmd_hex]);
-  index_buf_cmd_hex += index_buf_cmd << 1; //Double size of data field with conversion
+  index_buf_cmd_hex += index_buf_cmd << 1; // Double size of data field with conversion
 
-  //Add escape characters
+  // Add escape characters
   com_buf_astronode_hex[index_buf_cmd_hex++] = ETX;
 
   if ((_printDebug == true) && (_printFullDebug == true))
@@ -974,20 +1077,34 @@ uint8_t ASTRONODE::encode_send_request(uint8_t reg, uint8_t *param, uint8_t para
     print_array_to_hex(com_buf_astronode_hex, index_buf_cmd_hex);
   }
 
-  //Write command
+  // Write command
   if (_serialPort->write(com_buf_astronode_hex, index_buf_cmd_hex) == (size_t)(index_buf_cmd_hex))
   {
-    return ASN_NO_ERROR;
+    ret_val = ANS_STATUS_DATA_SENT;
   }
-  return ASN_ERROR_FAILED;
+  else
+  {
+    ret_val = ANS_STATUS_HW_ERR;
+  }
+
+  if ((_printDebug == true) || (_printFullDebug == true))
+  {
+    _debugSerial->print(get_error_code_string(ret_val));
+  }
+
+  return ret_val;
 }
 
-uint16_t ASTRONODE::receive_decode_answer(uint8_t *param, uint8_t param_length)
+ans_status_e ASTRONODE::receive_decode_answer(uint8_t *reg,
+                                              uint8_t *param,
+                                              uint8_t param_length)
 {
-  //Read answer
+  ans_status_e ret_val;
+
+  // Read answer
   size_t rx_length = _serialPort->readBytesUntil(ETX, (char *)com_buf_astronode_hex, 2 * COMMAND_MAX_SIZE);
 
-  if (rx_length > 6) //At least STX (1), ETX (1), CRC (4)
+  if (rx_length > 6) // At least STX (1), ETX (1), CRC (4)
   {
     if ((_printDebug == true) && (_printFullDebug == true))
     {
@@ -995,7 +1112,7 @@ uint16_t ASTRONODE::receive_decode_answer(uint8_t *param, uint8_t param_length)
       print_array_to_hex(com_buf_astronode_hex, rx_length);
     }
 
-    //Translate to binary
+    // Translate to binary
     hex_array_to_byte_array(&com_buf_astronode_hex[1], rx_length, com_buf_astronode); // Skip STX, ETX not in buffer
 
     if ((_printDebug == true) && (_printFullDebug == true))
@@ -1004,8 +1121,8 @@ uint16_t ASTRONODE::receive_decode_answer(uint8_t *param, uint8_t param_length)
       print_array_to_hex(com_buf_astronode, rx_length >> 1);
     }
 
-    //Verify CRC
-    uint16_t msg_length = (rx_length >> 1) - 2; //Divid by 2 and remove CRC (2 bytes)
+    // Verify CRC
+    uint16_t msg_length = (rx_length >> 1) - 2; // Divid by 2 and remove CRC (2 bytes)
     uint16_t cmd_crc = crc_compute(com_buf_astronode, msg_length, 0xFFFF);
     uint16_t cmd_crc_check = (((uint16_t)com_buf_astronode[msg_length + 1]) << 8) + (uint16_t)(com_buf_astronode[msg_length]);
 
@@ -1013,104 +1130,117 @@ uint16_t ASTRONODE::receive_decode_answer(uint8_t *param, uint8_t param_length)
     {
       if (com_buf_astronode[0] == ERR_RA)
       {
-        //Process error code from terminal
-        uint16_t error_code = (((uint16_t)com_buf_astronode[2]) << 8) + (uint16_t)(com_buf_astronode[1]);
-        print_error_code(error_code);
+        // Process error code from terminal
+        ret_val = (ans_status_e)((((uint16_t)com_buf_astronode[2]) << 8) + (uint16_t)(com_buf_astronode[1]));
       }
       else
       {
-        //Extract parameters
+        // Extract parameters
         memcpy(param, &com_buf_astronode[1], param_length);
-      }
 
-      //Return reply from terminal
-      return (uint16_t)com_buf_astronode[0];
+        // Return reply from terminal
+        *reg = com_buf_astronode[0];
+
+        ret_val = ANS_STATUS_DATA_RECEIVED;
+      }
     }
     else
     {
-      if ((_printDebug == true) || (_printFullDebug == true))
-      {
-        _debugSerial->println(F("ASTRONODE - Failed to check CRC - frame is not valid"));
-      }
+      ret_val = ANS_STATUS_CRC_NOT_VALID;
     }
   }
   else
   {
-    if ((_printDebug == true) || (_printFullDebug == true))
-    {
-      _debugSerial->println(F("ASTRONODE - Failed to receive data from astronode before timeout"));
-    }
+    ret_val = ANS_STATUS_TIMEOUT;
   }
-  return ASN_ERROR_FAILED;
-}
 
-void ASTRONODE::print_error_code(uint16_t code)
-{
   if ((_printDebug == true) || (_printFullDebug == true))
   {
-    switch (code)
-    {
-    case CRC_NOT_VALID:
-      _debugSerial->println(F("ASTRONODE - Discrepancy between provided CRC and expected CRC."));
-      break;
-    case LENGTH_NOT_VALID:
-      _debugSerial->println(F("ASTRONODE - Message exceeds the maximum length for a frame."));
-      break;
-    case OPCODE_NOT_VALID:
-      _debugSerial->println(F("ASTRONODE - Invalid Operation Code used."));
-      break;
-    case ARG_NOT_VALID:
-      _debugSerial->println(F("ASTRONODE - Invalid argument used."));
-      break;
-    case FLASH_WRITING_FAILED:
-      _debugSerial->println(F("ASTRONODE - Failed to write to the flash."));
-      break;
-    case DEVICE_BUSY:
-      _debugSerial->println(F("ASTRONODE - Device is busy."));
-      break;
-    case FORMAT_NOT_VALID:
-      _debugSerial->println(F("ASTRONODE - At least one of the fields (SSID, password, token) is not composed of exclusively printable standard ASCII characters (0x20 to 0x7E)."));
-      break;
-    case PERIOD_INVALID:
-      _debugSerial->println(F("ASTRONODE - The Satellite Search Config period enumeration value is not valid."));
-      break;
-    case BUFFER_FULL:
-      _debugSerial->println(F("ASTRONODE - Failed to queue the payload because the sending queue is already full."));
-      break;
-    case DUPLICATE_ID:
-      _debugSerial->println(F("ASTRONODE - Failed to queue the payload because the Payload ID provided by the asset is already in use in the terminal queue."));
-      break;
-    case BUFFER_EMPTY:
-      _debugSerial->println(F("ASTRONODE - Failed to dequeue a payload from the buffer because the buffer is empty."));
-      break;
-    case INVALID_POS:
-      _debugSerial->println(F("ASTRONODE - Invalid position."));
-      break;
-    case NO_ACK:
-      _debugSerial->println(F("ASTRONODE - No satellite acknowledgement available for any payload."));
-      break;
-    case NO_ACK_CLEAR:
-      _debugSerial->println(F("ASTRONODE - No payload ack to clear, or it was already cleared."));
-      break;
-    case NO_COMMAND:
-      _debugSerial->println(F("ASTRONODE - No command is available."));
-      break;
-    case NO_COMMAND_CLEAR:
-      _debugSerial->println(F("ASTRONODE - No command to clear, or it was already cleared."));
-      break;
-    case MAX_TX_REACHED:
-      _debugSerial->println(F("ASTRONODE - Failed to test Tx due to the maximum number of transmissions being reached."));
-      break;
-    default:
-    {
-      _debugSerial->print(F("ASTRONODE - Unknown error code: "));
-      _debugSerial->println(code);
-    }
-    }
+    _debugSerial->print(get_error_code_string(ret_val));
+  }
+
+  return ret_val;
+}
+
+const char *ASTRONODE::get_error_code_string(uint16_t code)
+{
+  switch (code)
+  {
+  case ANS_STATUS_CRC_NOT_VALID:
+    return "Discrepancy between provided CRC and expected CRC.\n";
+    break;
+  case ANS_STATUS_LENGTH_NOT_VALID:
+    return "Message exceeds the maximum length for a frame.\n";
+    break;
+  case ANS_STATUS_OPCODE_NOT_VALID:
+    return "Invalid Operation Code used.\n";
+    break;
+  case ANS_STATUS_ARG_NOT_VALID:
+    return "Invalid argument used.\n";
+    break;
+  case ANS_STATUS_FLASH_WRITING_FAILED:
+    return "Failed to write to the flash.\n";
+    break;
+  case ANS_STATUS_DEVICE_BUSY:
+    return "Device is busy.\n";
+    break;
+  case ANS_STATUS_FORMAT_NOT_VALID:
+    return "At least one of the fields (SSID, password, token) is not composed of exclusively printable standard ASCII characters (0x20 to 0x7E).\n";
+    break;
+  case ANS_STATUS_PERIOD_INVALID:
+    return "The Satellite Search Config period enumeration value is not valid.\n";
+    break;
+  case ANS_STATUS_BUFFER_FULL:
+    return "Failed to queue the payload because the sending queue is already full.\n";
+    break;
+  case ANS_STATUS_DUPLICATE_ID:
+    return "Failed to queue the payload because the Payload ID provided by the asset is already in use in the terminal queue.\n";
+    break;
+  case ANS_STATUS_BUFFER_EMPTY:
+    return "Failed to dequeue a payload from the buffer because the buffer is empty.\n";
+    break;
+  case ANS_STATUS_INVALID_POS:
+    return "Invalid position.\n";
+    break;
+  case ANS_STATUS_NO_ACK:
+    return "No satellite acknowledgement available for any payload.\n";
+    break;
+  case ANS_STATUS_NO_ACK_CLEAR:
+    return "No payload ack to clear, or it was already cleared.\n";
+    break;
+  case ANS_STATUS_NO_COMMAND:
+    return "No command is available.\n";
+    break;
+  case ANS_STATUS_NO_COMMAND_CLEAR:
+    return "No command to clear, or it was already cleared.\n";
+    break;
+  case ANS_STATUS_MAX_TX_REACHED:
+    return "Failed to test Tx due to the maximum number of transmissions being reached.\n";
+    break;
+  case ANS_STATUS_TIMEOUT:
+    return "Failed to receive data from astronode before timeout.\n";
+    break;
+  case ANS_STATUS_HW_ERR:
+    return "Failed to send data to the terminal.\n";
+    break;
+  case ANS_STATUS_SUCCESS:
+    return "";
+    break;
+  case ANS_STATUS_DATA_SENT:
+    return "";
+    break;
+  case ANS_STATUS_DATA_RECEIVED:
+    return "";
+    break;
+  default:
+    return "Unknown error code.\n";
+    break;
   }
 }
 
-uint16_t ASTRONODE::crc_compute(uint8_t *data, uint16_t data_length, uint16_t init)
+uint16_t ASTRONODE::crc_compute(uint8_t *data,
+                                uint16_t data_length,
+                                uint16_t init)
 {
   uint16_t x;
   uint16_t crc = init;
@@ -1124,7 +1254,9 @@ uint16_t ASTRONODE::crc_compute(uint8_t *data, uint16_t data_length, uint16_t in
   return crc;
 }
 
-void ASTRONODE::byte_array_to_hex_array(uint8_t *in, uint8_t length, uint8_t *out)
+void ASTRONODE::byte_array_to_hex_array(uint8_t *in,
+                                        uint8_t length,
+                                        uint8_t *out)
 {
   for (int i = 0; i < length; i++)
   {
@@ -1136,7 +1268,9 @@ void ASTRONODE::byte_array_to_hex_array(uint8_t *in, uint8_t length, uint8_t *ou
   }
 }
 
-void ASTRONODE::hex_array_to_byte_array(uint8_t *in, uint8_t length, uint8_t *out)
+void ASTRONODE::hex_array_to_byte_array(uint8_t *in,
+                                        uint8_t length,
+                                        uint8_t *out)
 {
   for (int i = 0; i < length; i += 2)
   {
@@ -1171,7 +1305,8 @@ uint8_t ASTRONODE::hex_to_nibble(uint8_t hex)
   }
 }
 
-void ASTRONODE::print_array_to_hex(uint8_t data[], size_t length)
+void ASTRONODE::print_array_to_hex(uint8_t data[],
+                                   size_t length)
 {
   _debugSerial->println("uint8_t message[] = {");
   for (size_t i = 0; i < length; i++)

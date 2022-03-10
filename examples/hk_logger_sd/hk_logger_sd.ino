@@ -57,7 +57,7 @@ void setup()
 
     //Initialize terminal
     ASTRONODE_SERIAL.begin(ASTRONODE_SERIAL_BAUDRATE);
-    if (astronode.begin(ASTRONODE_SERIAL) == ASN_ERROR_FAILED)
+    if (astronode.begin(ASTRONODE_SERIAL) != ANS_STATUS_SUCCESS)
     {
         while (1)
             ;
@@ -87,11 +87,11 @@ void loop()
 
     //Querry HK and RTC
     uint32_t rtc_time;
-    if (astronode.read_performance_counter() == ASN_NO_ERROR &&
-        astronode.read_module_state() == ASN_NO_ERROR &&
-        astronode.read_environment_details() == ASN_NO_ERROR &&
-        astronode.read_last_contact_details() == ASN_NO_ERROR &&
-        astronode.rtc_read(&rtc_time) == ASN_NO_ERROR)
+    if (astronode.read_performance_counter() == ANS_STATUS_SUCCESS &&
+        astronode.read_module_state() == ANS_STATUS_SUCCESS &&
+        astronode.read_environment_details() == ANS_STATUS_SUCCESS &&
+        astronode.read_last_contact_details() == ANS_STATUS_SUCCESS &&
+        astronode.rtc_read(&rtc_time) == ANS_STATUS_SUCCESS)
     {
         //Save to SD card
         if (digitalRead(PIN_SD_CD) == LOW)
@@ -114,7 +114,7 @@ void loop()
     {
         //If satellite ACK event, read and clear event to be able to queue a new message
         uint16_t counter_read = 0;
-        if (astronode.read_satellite_ack(&counter_read) == ASN_NO_ERROR)
+        if (astronode.read_satellite_ack(&counter_read) == ANS_STATUS_SUCCESS)
         {
             astronode.clear_satellite_ack();
         }
@@ -131,8 +131,8 @@ void loop()
         //If command event, read command, write command to SD card, clear command
         uint8_t data[40] = {0};
         uint32_t createdDate = 0;
-        if (astronode.read_command_40B(data, &createdDate) == ASN_NO_ERROR &&
-            astronode.rtc_read(&rtc_time) == ASN_NO_ERROR)
+        if (astronode.read_command_40B(data, &createdDate) == ANS_STATUS_SUCCESS &&
+            astronode.rtc_read(&rtc_time) == ANS_STATUS_SUCCESS)
         {
             if (save_command_to_sd(rtc_time, data, createdDate))
             {
