@@ -395,7 +395,7 @@ ans_status_e ASTRONODE::rtc_read(uint32_t *time)
   return ret_val;
 }
 
-ans_status_e ASTRONODE::read_next_contact_opportunity(uint32_t *time)
+ans_status_e ASTRONODE::read_next_contact_opportunity(uint32_t *delay)
 {
   if ((_printDebug == true) || (_printFullDebug == true))
   {
@@ -413,11 +413,11 @@ ans_status_e ASTRONODE::read_next_contact_opportunity(uint32_t *time)
     ret_val = receive_decode_answer(&reg, param_a, sizeof(param_a));
     if (ret_val == ANS_STATUS_DATA_RECEIVED && reg == NCO_RA)
     {
-      uint32_t time_tmp = (((uint32_t)param_a[3]) << 24) +
+      uint32_t delay_tmp = (((uint32_t)param_a[3]) << 24) +
                           (((uint32_t)param_a[2]) << 16) +
                           (((uint32_t)param_a[1]) << 8) +
                           (((uint32_t)param_a[0] << 0));
-      *time = time_tmp + ASTROCAST_REF_UNIX_TIME;
+      *delay = delay_tmp;
       ret_val = ANS_STATUS_SUCCESS;
     }
   }
@@ -932,7 +932,7 @@ ans_status_e ASTRONODE::clear_reset_event(void)
   return ret_val;
 }
 
-ans_status_e ASTRONODE::read_command_8B(uint8_t data[8],
+ans_status_e ASTRONODE::read_command_8B(uint8_t data[DATA_CMD_8B_SIZE],
                                         uint32_t *createdDate)
 {
   if ((_printDebug == true) || (_printFullDebug == true))
@@ -956,14 +956,14 @@ ans_status_e ASTRONODE::read_command_8B(uint8_t data[8],
                           (((uint32_t)param_a[1]) << 8) +
                           (((uint32_t)param_a[0]) << 0);
       *createdDate = time_tmp + ASTROCAST_REF_UNIX_TIME;
-      memcpy(data, &param_a[4], 8);
+      memcpy(data, &param_a[4], DATA_CMD_8B_SIZE);
       ret_val = ANS_STATUS_SUCCESS;
     }
   }
   return ret_val;
 }
 
-ans_status_e ASTRONODE::read_command_40B(uint8_t data[40],
+ans_status_e ASTRONODE::read_command_40B(uint8_t data[DATA_CMD_40B_SIZE],
                                          uint32_t *createdDate)
 {
   if ((_printDebug == true) || (_printFullDebug == true))
@@ -987,7 +987,7 @@ ans_status_e ASTRONODE::read_command_40B(uint8_t data[40],
                           (((uint32_t)param_a[1]) << 8) +
                           (((uint32_t)param_a[0]) << 0);
       *createdDate = time_tmp + ASTROCAST_REF_UNIX_TIME;
-      memcpy(data, &param_a[4], 40);
+      memcpy(data, &param_a[4], DATA_CMD_40B_SIZE);
       ret_val = ANS_STATUS_SUCCESS;
     }
   }

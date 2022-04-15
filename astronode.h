@@ -23,7 +23,7 @@
 
 // Timeout
 #define TIMEOUT_SERIAL 1500 // ms
-#define BOOT_TIME 1500      // ms
+#define BOOT_TIME 400       // ms
 
 // REQUEST (Asset => Terminal)
 #define CFG_WR 0x05 // Write configuration, and store in non-volatile memory
@@ -183,6 +183,10 @@ typedef enum
 #define TYPE_ASTRONODE_S 3
 #define TYPE_WIFI_DEVKIT 4
 
+// Data commands (downlink)
+#define DATA_CMD_8B_SIZE 8
+#define DATA_CMD_40B_SIZE 40
+
 // Astrocast time
 #define ASTROCAST_REF_UNIX_TIME 1514764800 // 2018-01-01T00:00:00Z (= Astrocast time)
 
@@ -315,7 +319,7 @@ public:
   ans_status_e product_number_read(String *pn);
 
   ans_status_e rtc_read(uint32_t *time);
-  ans_status_e read_next_contact_opportunity(uint32_t *time);
+  ans_status_e read_next_contact_opportunity(uint32_t *delay);
   ans_status_e read_performance_counter(void);
   ans_status_e save_performance_counter(void);
   ans_status_e clear_performance_counter(void);
@@ -329,9 +333,9 @@ public:
   ans_status_e dequeue_payload(uint16_t *id);
   ans_status_e clear_free_payloads(void);
 
-  ans_status_e read_command_8B(uint8_t data[8],
+  ans_status_e read_command_8B(uint8_t data[DATA_CMD_8B_SIZE],
                                uint32_t *createdDate);
-  ans_status_e read_command_40B(uint8_t data[40],
+  ans_status_e read_command_40B(uint8_t data[DATA_CMD_40B_SIZE],
                                 uint32_t *createdDate);
   ans_status_e clear_command(void);
 
