@@ -65,8 +65,8 @@ def get_gs_pass_info_from_tle(sat_tle, lat, lon, alt, elev_min, t_start, t_end):
     # Find contact oportunities
     ts = load.timescale()
     t, events = sat_tle.find_events(ground_station,
-                                      ts.from_datetime(t_start),
-                                      ts.from_datetime(t_end),
+                                      ts.from_datetime(t_start - datetime.timedelta(minutes=10)),
+                                      ts.from_datetime(t_end + datetime.timedelta(minutes=10)),
                                       altitude_degrees=0)
 
     difference = sat_tle - ground_station
