@@ -351,7 +351,7 @@ ans_status_e ASTRONODE::product_number_read(String *pn)
   // Send request
   uint8_t reg = MPN_RR;
   ans_status_e ret_val = encode_send_request(reg, NULL, 0);
-  if (encode_send_request(reg, NULL, 0) == ANS_STATUS_DATA_SENT)
+  if (ret_val == ANS_STATUS_DATA_SENT)
   {
     ret_val = receive_decode_answer(&reg, param_a, sizeof(param_a));
     if (ret_val == ANS_STATUS_DATA_RECEIVED && reg == MPN_RA)
