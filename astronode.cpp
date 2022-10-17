@@ -721,7 +721,7 @@ ans_status_e ASTRONODE::enqueue_payload(uint8_t *data,
   }
 
   ans_status_e ret_val;
-  if (length < ASN_MAX_MSG_SIZE)
+  if (length <= ASN_MAX_MSG_SIZE)
   {
     // Set parameters
     uint8_t param_w[160 + 2] = {};
