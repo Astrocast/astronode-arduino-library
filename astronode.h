@@ -23,7 +23,8 @@
 
 // Timeout
 #define TIMEOUT_SERIAL 1500 // ms
-#define BOOT_TIME 400       // ms
+//#define TIMEOUT_FLASH 1400 // ms
+#define BOOT_TIME 400 // ms
 
 // REQUEST (Asset => Terminal)
 #define CFG_WR 0x05 // Write configuration, and store in non-volatile memory
@@ -88,9 +89,6 @@
 // Escape characters
 #define STX 0x02
 #define ETX 0x03
-
-// Command/Response size
-#define COMMAND_MAX_SIZE 200
 
 // Message queue description
 #define ASN_MAX_MSG_SIZE 160
@@ -201,9 +199,6 @@ private:
   bool _printDebug = false;     // Flag to print the serial commands we are sending to the Serial port for debug
   bool _printFullDebug = false; // Flag to print full debug messages. Useful for UART debugging
 
-  uint8_t com_buf_astronode[COMMAND_MAX_SIZE + 2];               // max cmd size + 2 bytes CRC
-  uint8_t com_buf_astronode_hex[2 * (COMMAND_MAX_SIZE + 2) + 2]; // max cmd size + 2 bytes CRC -> double for trasport layer + add 2 escape characters
-
   // Functions prototype
   ans_status_e encode_send_request(uint8_t reg,
                                    uint8_t *param,
@@ -219,12 +214,13 @@ private:
                                uint8_t *out);
   uint8_t nibble_to_hex(uint8_t nibble);
   uint8_t hex_to_nibble(uint8_t hex);
-  uint16_t crc_compute(uint8_t *data,
-                       uint16_t data_length,
+  uint16_t crc_compute(uint8_t reg,
+                       uint8_t *param,
+                       uint16_t param_length,
                        uint16_t init);
   void print_array_to_hex(uint8_t data[],
                           size_t length);
-  const char *get_error_code_string(uint16_t code);
+  void print_error_code_string(uint16_t code);
 
 public:
   // Global variables
@@ -302,7 +298,9 @@ public:
                                    bool with_ephemeris,
                                    bool with_deep_sleep,
                                    bool with_ack_event_pin_mask,
-                                   bool with_reset_event_pin_mask);
+                                   bool with_reset_event_pin_mask,
+                                   bool with_cmd_event_pin_mask,
+                                   bool with_tx_pend_event_pin_mask);
   ans_status_e configuration_read(void);
   ans_status_e configuration_save(void);
   ans_status_e wifi_configuration_write(const char *wland_ssid,

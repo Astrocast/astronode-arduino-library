@@ -39,6 +39,8 @@ SoftwareSerial ASTRONODE_SERIAL(2, 3);  // RX, TX
 #define ASTRONODE_WITH_DEEP_SLEEP_EN false
 #define ASTRONODE_WITH_MSG_ACK_PIN_EN false
 #define ASTRONODE_WITH_MSG_RESET_PIN_EN false
+#define ASTRONODE_WITH_CMD_EVENT_PIN_EN true
+#define ASTRONODE_WITH_TX_PEND_EVENT_PIN_EN false
 
 uint8_t data[17] = {"Hello Astrocast!"};
 uint16_t counter = 0;
@@ -64,7 +66,9 @@ void setup()
                                 ASTRONODE_WITH_EPHEMERIS,
                                 ASTRONODE_WITH_DEEP_SLEEP_EN,
                                 ASTRONODE_WITH_MSG_ACK_PIN_EN,
-                                ASTRONODE_WITH_MSG_RESET_PIN_EN);
+                                ASTRONODE_WITH_MSG_RESET_PIN_EN,
+                                ASTRONODE_WITH_CMD_EVENT_PIN_EN,
+                                ASTRONODE_WITH_TX_PEND_EVENT_PIN_EN);
 
   //Set geolocation
   astronode.geolocation_write((int32_t)(ASTRONODE_GEO_LAT * 10000000), (int32_t)(ASTRONODE_GEO_LON * 10000000));

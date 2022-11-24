@@ -34,6 +34,8 @@
 #define ASTRONODE_WITH_DEEP_SLEEP_EN false
 #define ASTRONODE_WITH_MSG_ACK_PIN_EN false
 #define ASTRONODE_WITH_MSG_RESET_PIN_EN false
+#define ASTRONODE_WITH_CMD_EVENT_PIN_EN true
+#define ASTRONODE_WITH_TX_PEND_EVENT_PIN_EN false
 #define ASTRONODE_PAYLOAD_SIZE 80 //[Bytes]
 
 ASTRONODE astronode;
@@ -52,9 +54,6 @@ void setup()
     pinMode(PIN_SD_CD, INPUT_PULLUP);
     digitalWrite(PIN_LED_STATUS, LOW);
 
-    //Disable USB interface
-    USBDevice.detach();
-
     //Initialize terminal
     ASTRONODE_SERIAL.begin(ASTRONODE_SERIAL_BAUDRATE);
     if (astronode.begin(ASTRONODE_SERIAL) != ANS_STATUS_SUCCESS)
@@ -67,7 +66,9 @@ void setup()
                                   ASTRONODE_WITH_EPHEMERIS,
                                   ASTRONODE_WITH_DEEP_SLEEP_EN,
                                   ASTRONODE_WITH_MSG_ACK_PIN_EN,
-                                  ASTRONODE_WITH_MSG_RESET_PIN_EN);
+                                  ASTRONODE_WITH_MSG_RESET_PIN_EN,
+                                  ASTRONODE_WITH_CMD_EVENT_PIN_EN,
+                                  ASTRONODE_WITH_TX_PEND_EVENT_PIN_EN);
     astronode.satellite_search_config_write(SAT_SEARCH_2755_MS, true);
     astronode.configuration_save();
     astronode.configuration_read();
