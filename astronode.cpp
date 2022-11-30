@@ -5,6 +5,12 @@
  * Website:     https://www.astrocast.com/
  * E-mail:      rvalceschini@astrocast.com
  ******************************************************************************************/
+/****************************************************************************************
+ * Created on: 			01.04.2021
+ * Supported Hardware: Arduino MKR 1400
+ *
+ * Firmware Version 1.0
+ ****************************************************************************************/
 
 #include "astronode.h"
 
@@ -1059,7 +1065,7 @@ ans_status_e ASTRONODE::encode_send_request(uint8_t reg,
   }
 
   // Add escape characters
-  uint8_t *com_buf_astronode_hex = (uint8_t *)calloc(2 * (1 + param_length + 2) + 2, sizeof(uint8_t));
+  uint8_t *com_buf_astronode_hex = (uint8_t *)calloc(STX_L + 2 * (REG_L + param_length + CRC_L) + ETX_L, sizeof(uint8_t));
   if (com_buf_astronode_hex == NULL)
   {
     if ((_printDebug == true) || (_printFullDebug == true))
@@ -1076,12 +1082,12 @@ ans_status_e ASTRONODE::encode_send_request(uint8_t reg,
     com_buf_astronode_hex[index_buf_cmd_hex++] = STX;
 
     // Translate to hexadecimal
-    byte_array_to_hex_array(&reg, sizeof(reg), &com_buf_astronode_hex[index_buf_cmd_hex]);
-    index_buf_cmd_hex += 2 * sizeof(reg);
+    byte_array_to_hex_array(&reg, REG_L, &com_buf_astronode_hex[index_buf_cmd_hex]);
+    index_buf_cmd_hex += 2 * REG_L;
     byte_array_to_hex_array(param, param_length, &com_buf_astronode_hex[index_buf_cmd_hex]);
     index_buf_cmd_hex += 2 * param_length;
-    byte_array_to_hex_array((uint8_t *)&cmd_crc, sizeof(cmd_crc), &com_buf_astronode_hex[index_buf_cmd_hex]);
-    index_buf_cmd_hex += 2 * sizeof(cmd_crc);
+    byte_array_to_hex_array((uint8_t *)&cmd_crc, CRC_L, &com_buf_astronode_hex[index_buf_cmd_hex]);
+    index_buf_cmd_hex += 2 * CRC_L;
 
     // Add escape characters
     com_buf_astronode_hex[index_buf_cmd_hex++] = ETX;
@@ -1120,7 +1126,12 @@ ans_status_e ASTRONODE::receive_decode_answer(uint8_t *reg,
   ans_status_e ret_val;
 
   // Read answer
-  uint8_t *com_buf_astronode_hex = (uint8_t *)calloc(2 * (1 + param_length + 2) + 2, sizeof(uint8_t));
+  uint16_t max_rx_length = STX_L + 2 * (REG_L + param_length + CRC_L) + ETX_L;
+  if (max_rx_length < (STX_L + 2 * (REG_L + PERR_L + CRC_L) + ETX_L))
+  {
+    max_rx_length = STX_L + 2 * (REG_L + PERR_L + CRC_L) + ETX_L; // Account at least for error code
+  }
+  uint8_t *com_buf_astronode_hex = (uint8_t *)calloc(max_rx_length, sizeof(uint8_t));
   if (com_buf_astronode_hex == NULL)
   {
     if ((_printDebug == true) || (_printFullDebug == true))
@@ -1133,9 +1144,9 @@ ans_status_e ASTRONODE::receive_decode_answer(uint8_t *reg,
   {
     uint16_t index_buf_cmd_hex = 0;
 
-    size_t rx_length = _serialPort->readBytesUntil(ETX, (char *)com_buf_astronode_hex, 2 * (1 + param_length + 2) + 2);
+    size_t rx_length = _serialPort->readBytesUntil(ETX, (char *)com_buf_astronode_hex, max_rx_length);
 
-    if (rx_length > 6) // At least STX (1), ETX (1), CRC (4)
+    if (rx_length >= (STX_L + 2 * (REG_L + CRC_L))) // At least STX (1), REG(2), CRC (4) (ETX ignored by function)
     {
       if ((_printDebug == true) && (_printFullDebug == true))
       {
@@ -1144,41 +1155,46 @@ ans_status_e ASTRONODE::receive_decode_answer(uint8_t *reg,
       }
 
       // Translate to binary
-      uint16_t cmd_crc_check = 0xFFFF;
-      index_buf_cmd_hex++;
-      hex_array_to_byte_array(&com_buf_astronode_hex[index_buf_cmd_hex], 2 * sizeof(*reg), reg); // Skip STX, ETX not in buffer
-      index_buf_cmd_hex += 2 * sizeof(*reg);
-      hex_array_to_byte_array(&com_buf_astronode_hex[index_buf_cmd_hex], 2 * param_length, param);
-      index_buf_cmd_hex += 2 * param_length;
-      hex_array_to_byte_array(&com_buf_astronode_hex[index_buf_cmd_hex], 2 * sizeof(cmd_crc_check), (uint8_t *)&cmd_crc_check);
-      index_buf_cmd_hex += 2 * sizeof(cmd_crc_check);
+      uint16_t cmd_crc_check = 0xFFFF, cmd_crc = 0xFFFF;
+      index_buf_cmd_hex += STX_L;
 
-      if ((_printDebug == true) && (_printFullDebug == true))
+      // Register extraction
+      hex_array_to_byte_array(&com_buf_astronode_hex[index_buf_cmd_hex], 2 * REG_L, reg); // Skip STX, ETX not in buffer
+      index_buf_cmd_hex += 2 * REG_L;
+
+      // Parameter extraction (handle error cases)
+      if (*reg == ERR_RA)
       {
-        _debugSerial->print(F("terminal -> asset (+ CRC): CRC = "));
-        _debugSerial->print(cmd_crc_check, HEX);
-        _debugSerial->print(F("; Length = "));
-        _debugSerial->print(param_length);
-        _debugSerial->println(F(" [bytes]; data = "));
-        print_array_to_hex(param, param_length);
-      }
-
-      // Verify CRC
-      uint16_t cmd_crc = crc_compute(*reg, param, param_length, 0xFFFF);
-
-      if (cmd_crc == cmd_crc_check)
-      {
-        if (*reg == ERR_RA)
-        {
-          // Process error code from terminal
-          ret_val = (ans_status_e)((((uint16_t)param[1]) << 8) + (uint16_t)(param[0]));
-        }
-        else
-        {
-          ret_val = ANS_STATUS_DATA_RECEIVED;
-        }
+        uint8_t param_err[PERR_L]; // handle case where param = NULL
+        hex_array_to_byte_array(&com_buf_astronode_hex[index_buf_cmd_hex], 2 * PERR_L, param_err);
+        index_buf_cmd_hex += 2 * PERR_L;
+        cmd_crc = crc_compute(*reg, param_err, PERR_L, 0xFFFF);
+        ret_val = (ans_status_e)((((uint16_t)param_err[1]) << 8) + (uint16_t)(param_err[0]));
       }
       else
+      {
+        hex_array_to_byte_array(&com_buf_astronode_hex[index_buf_cmd_hex], 2 * param_length, param);
+        index_buf_cmd_hex += 2 * param_length;
+        cmd_crc = crc_compute(*reg, param, param_length, 0xFFFF);
+        ret_val = ANS_STATUS_DATA_RECEIVED;
+
+        if ((_printDebug == true) && (_printFullDebug == true))
+        {
+          _debugSerial->print(F("terminal -> asset (+ CRC): CRC = "));
+          _debugSerial->print(cmd_crc_check, HEX);
+          _debugSerial->print(F("; Length = "));
+          _debugSerial->print(param_length);
+          _debugSerial->println(F(" [bytes]; data = "));
+          print_array_to_hex(param, param_length);
+        }
+      }
+
+      // CRC extraction
+      hex_array_to_byte_array(&com_buf_astronode_hex[index_buf_cmd_hex], 2 * PERR_L, (uint8_t *)&cmd_crc_check);
+      index_buf_cmd_hex += 2 * PERR_L;
+
+      // Verify CRC
+      if (cmd_crc != cmd_crc_check)
       {
         ret_val = ANS_STATUS_CRC_NOT_VALID;
       }
@@ -1193,6 +1209,9 @@ ans_status_e ASTRONODE::receive_decode_answer(uint8_t *reg,
       print_error_code_string(ret_val);
     }
     free(com_buf_astronode_hex);
+    //_serialPort->flush();  // Not implemented in NeoStream
+    while (_serialPort->available()) // Consume remaining bytes in the buffer if any
+      _serialPort->read();
   }
 
   return ret_val;

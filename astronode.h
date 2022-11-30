@@ -5,6 +5,12 @@
  * Website:     https://www.astrocast.com/
  * E-mail:      rvalceschini@astrocast.com
  ******************************************************************************************/
+/****************************************************************************************
+ * Created on: 			01.04.2021
+ * Supported Hardware: Arduino MKR 1400
+ *
+ * Firmware Version 1.0
+ ****************************************************************************************/
 
 #ifndef _ASTRONODE_h
 #define _ASTRONODE_h
@@ -19,6 +25,13 @@
 #define TIMEOUT_SERIAL 1500 // ms
 //#define TIMEOUT_FLASH 1400 // ms
 #define BOOT_TIME 400 // ms
+
+// Protocol definition
+#define CRC_L 2
+#define REG_L 1
+#define STX_L 1
+#define ETX_L 1
+#define PERR_L 2  // Error parameter length
 
 // REQUEST (Asset => Terminal)
 #define CFG_WR 0x05 // Write configuration, and store in non-volatile memory
