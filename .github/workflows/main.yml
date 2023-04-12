@@ -22,5 +22,5 @@ jobs:
             - examples/hello_Astronode
             - examples/hk_logger_sd
           libraries: |
-            - name: astrocast
+            - name: astronode
             - source-path: .
