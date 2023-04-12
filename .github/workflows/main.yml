@@ -23,4 +23,4 @@ jobs:
             - examples/hk_logger_sd
           libraries: |
             - source-path: ./
-            - name: Adafruit_SleepyDog
+            - source-url: git@github.com:adafruit/Adafruit_SleepyDog.git
