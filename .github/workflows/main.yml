@@ -24,3 +24,5 @@ jobs:
           libraries: |
             - source-path: ./
             - source-url: https://github.com/adafruit/Adafruit_SleepyDog.git
+            - name: SD
+            - name: SPI
