@@ -22,4 +22,4 @@ jobs:
             - examples/hello_Astronode
             - examples/hk_logger_sd
           libraries: |
-            - source-path: .
+            - source-path: ./
