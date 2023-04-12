@@ -22,5 +22,4 @@ jobs:
             - examples/hello_Astronode
             - examples/hk_logger_sd
           libraries: |
-            - name: astronode
             - source-path: .
