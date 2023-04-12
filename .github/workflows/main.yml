@@ -21,3 +21,6 @@ jobs:
           sketch-paths: |
             - examples/hello_Astronode
             - examples/hk_logger_sd
+          libraries: |
+            - name: astrocast
+            - source-path: .
