@@ -23,4 +23,3 @@ jobs:
             - examples/hk_logger_sd
           libraries: |
             - source-path: ./
-            - name: arduino
