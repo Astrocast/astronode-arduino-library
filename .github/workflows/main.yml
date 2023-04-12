@@ -10,11 +10,7 @@ jobs:
     strategy:
       matrix:
         fqbn:
-          - arduino:samd:mkrwifi1010
-          - arduino:samd:nano_33_iot
-          - arduino:megaavr:uno2018:mode=on
-          - arduino:mbed:nano33ble
-          - arduino:mbed_nano:nanorp2040connect
+          - arduino:avr:nano
 
     steps:
       - uses: actions/checkout@v3
@@ -25,5 +21,3 @@ jobs:
           sketch-paths: |
             - examples/hello_Astronode
             - examples/hk_logger_sd
-          libraries: |
-            - name: astronode
