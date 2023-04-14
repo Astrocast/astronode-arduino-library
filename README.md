@@ -1,10 +1,12 @@
 # astronode-arduino-library
-Arduino Library for the Astronode S. It also includes a "Hello World" example.
+Arduino Library for the Astronode S.
 
 [![Lint library](https://github.com/Astrocast/astronode-arduino-library/actions/workflows/lint_library.yml/badge.svg)](https://github.com/Astrocast/astronode-arduino-library/actions/workflows/lint_library.yml)
 [![Build examples](https://github.com/Astrocast/astronode-arduino-library/actions/workflows/build_examples.yml/badge.svg)](https://github.com/Astrocast/astronode-arduino-library/actions/workflows/build_examples.yml)
 
 # Examples
+
+Use the examples below as reference designs to develop your own application using the astronode-arduino-library.
 
 ## hello_Astronode
 This sketch enqueues a single message in Astronode S queue. It checks periodically if a new event is available. If a "satellite acknowledge" event is received, a new message is enqueued in the module.
@@ -26,3 +28,6 @@ This sketch periodically logs all housekeeping from the module on an SD card (pe
 ### Hardware setup
 - [Adafruit Feather M0 Adalogger](https://www.adafruit.com/product/2796) (TX -> D16(RX), RX -> D15 (TX), GND -> GND, 3V3 -> 3V3)
 - [Astronode S devkit](https://docs.astrocast.com/docs/products/astronode-devkit/product-brief) (sat or wifi)
+
+### Software tools
+- plot_sdlogger.py: plot the satellite passes from the SD CSV data
