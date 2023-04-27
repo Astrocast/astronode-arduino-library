@@ -26,7 +26,7 @@
 #define PIN_LED_STATUS LED_BUILTIN
 
 // Astronode configuration
-#define ASTRONODE_SERIAL Serial1
+#define ASTRONODE_SERIAL Serial
 #define ASTRONODE_SERIAL_BAUDRATE 9600
 #define ASTRONODE_WITH_PLD_ACK true
 #define ASTRONODE_WITH_GEO_LOC false

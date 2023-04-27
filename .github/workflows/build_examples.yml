@@ -1,0 +1,47 @@
+name: Build examples
+on:
+  - push
+  - pull_request
+
+jobs:
+  hello_Astronode_build:
+    name: hello_Astronode_build
+    runs-on: ubuntu-latest
+
+    strategy:
+      matrix:
+        fqbn:
+          - arduino:avr:uno
+
+    steps:
+      - uses: actions/checkout@v3
+      - uses: arduino/compile-sketches@v1
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          fqbn: ${{ matrix.fqbn }}
+          sketch-paths: |
+            - examples/hello_Astronode
+          libraries: |
+            - source-path: ./
+  
+  hk_logger_sd_build:          
+    name: hk_logger_sd_build
+    runs-on: ubuntu-latest
+
+    strategy:
+      matrix:
+        fqbn:
+          - arduino:avr:uno
+
+    steps:
+      - uses: actions/checkout@v3
+      - uses: arduino/compile-sketches@v1
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          fqbn: ${{ matrix.fqbn }}
+          sketch-paths: |
+            - examples/hk_logger_sd
+          libraries: |
+            - source-path: ./
+            - source-url: https://github.com/adafruit/Adafruit_SleepyDog.git
+            - source-url: https://github.com/arduino-libraries/SD.git
