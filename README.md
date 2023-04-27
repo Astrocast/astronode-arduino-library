@@ -12,7 +12,9 @@ Use the examples below as reference designs to develop your own application usin
 This sketch enqueues a single message in Astronode S queue. It checks periodically if a new event is available. If a "satellite acknowledge" event is received, a new message is enqueued in the module.
 
 ### Hardware setup
-An [Astronode S devkit](https://docs.astrocast.com/docs/products/astronode-devkit/product-brief) (sat or wifi) is required. Additionally, you will need one of these boards:
+An [Astronode S devkit](https://docs.astrocast.com/docs/products/astronode-devkit/product-brief) (sat or wifi) or an [Astronode S+](https://docs.astrocast.com/docs/products/astronode-s-plus) is required.
+
+This sketch has been successfully run in the following boards:
 - [Nucleo-64 STM32l476](https://www.st.com/en/evaluation-tools/nucleo-l476rg.html) (TX -> D2(PA10), RX -> D8(PA9), GND -> GND, 3V3 -> 3V3)
 - [Arduino MKR1400](https://docs.arduino.cc/hardware/mkr-gsm-1400) (TX -> D13(RX), RX -> D14 (TX), GND -> GND, 3V3 -> VCC)
 - [Arduino UNO](https://docs.arduino.cc/hardware/uno-rev3) (TX -> D2(with level shifter), RX -> D3(with level shifter), GND -> GND, 3V3 -> VCC)
@@ -27,7 +29,7 @@ This sketch periodically logs all housekeeping from the module on an SD card (pe
 
 ### Hardware setup
 - [Adafruit Feather M0 Adalogger](https://www.adafruit.com/product/2796) (TX -> D16(RX), RX -> D15 (TX), GND -> GND, 3V3 -> 3V3)
-- [Astronode S devkit](https://docs.astrocast.com/docs/products/astronode-devkit/product-brief) (sat or wifi)
+- [Astronode S devkit](https://docs.astrocast.com/docs/products/astronode-devkit/product-brief) (sat or wifi) or [Astronode S+](https://docs.astrocast.com/docs/products/astronode-s-plus)
 
 ### Software tools
 - plot_sdlogger.py: plot the satellite passes from the SD CSV data
